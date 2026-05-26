@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Tetris Sustentável</title>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div id="game-container">
+    <canvas id="tetris"></canvas>
+  </div>
+
+  <div id="gamepad">
+    <div class="d-pad">
+      <div class="d-btn" id="btn-up">↻</div>
+      <div class="d-btn" id="btn-left">◀</div>
+      <div class="d-btn" id="btn-right">▶</div>
+      <div class="d-btn" id="btn-down">▼</div>
+    </div>
+    <div class="action-buttons">
+      <div class="action-btn" id="btn-drop">⏬</div>
+      <div class="action-btn green" id="btn-rotate">A</div>
+    </div>
+  </div>
+
+  <script src="game.js"></script>
+</body>
+</html>

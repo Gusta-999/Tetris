@@ -1,0 +1,132 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;800&family=Rajdhani:wght@600&display=swap');
+
+* { 
+  margin: 0; 
+  padding: 0; 
+  box-sizing: border-box; 
+}
+
+/* Layout Flexível que se adapta a Celulares em pé ou Notebooks deitados */
+body { 
+  background: #0d111a;
+  display: flex; 
+  flex-direction: column;
+  height: 100vh; 
+  font-family: 'Rajdhani', sans-serif; 
+  overflow: hidden; 
+  touch-action: none; /* Bloqueia gestos nativos do celular */
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* O canvas vai encolher no notebook para caber tudo na tela */
+#game-container {
+  flex: 1 1 auto;
+  min-height: 0; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 10px;
+}
+
+canvas { 
+  max-height: 100%; 
+  max-width: 100%; 
+  object-fit: contain; 
+  border-radius: 12px; 
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
+  background: #0a0e14;
+}
+
+/* Painel de Controles */
+#gamepad {
+  flex: 0 0 180px; /* Altura fixa embaixo */
+  width: 100%;
+  background: #111724;
+  border-top: 2px solid #1a2235;
+  display: flex;
+  justify-content: center; /* Centraliza tudo no PC */
+  gap: 40px; /* Espaço entre o analógico e os botões */
+  align-items: center;
+  padding: 0 20px;
+  border-radius: 20px 20px 0 0;
+  box-shadow: 0 -10px 20px rgba(0,0,0,0.5);
+}
+
+/* D-PAD Esquerdo (Analógico) */
+.d-pad {
+  position: relative;
+  width: 130px;
+  height: 130px;
+  background: #1a2235;
+  border-radius: 50%;
+  box-shadow: inset 0 5px 15px rgba(0,0,0,0.8), 0 5px 10px rgba(0,0,0,0.3);
+  border: 3px solid #0d111a;
+}
+
+.d-btn {
+  position: absolute;
+  background: #2a3553;
+  color: rgba(255,255,255,0.6);
+  border: none;
+  font-size: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: inset 0 2px 2px rgba(255,255,255,0.1);
+  cursor: pointer; 
+}
+
+.d-btn:active {
+  background: #2ed573;
+  color: #fff;
+}
+
+#btn-up { top: 0; left: 45px; width: 40px; height: 42px; border-radius: 8px 8px 4px 4px; }
+#btn-down { bottom: 0; left: 45px; width: 40px; height: 42px; border-radius: 4px 4px 8px 8px; }
+#btn-left { top: 45px; left: 0; width: 42px; height: 40px; border-radius: 8px 4px 4px 8px; }
+#btn-right { top: 45px; right: 0; width: 42px; height: 40px; border-radius: 4px 8px 8px 4px; }
+
+/* Centro do D-Pad */
+.d-pad::after {
+  content: '';
+  position: absolute;
+  top: 48px; left: 48px;
+  width: 34px; height: 34px;
+  background: #111724;
+  border-radius: 50%;
+}
+
+/* Botões de Ação Direitos */
+.action-buttons {
+  display: flex;
+  gap: 15px;
+  align-items: flex-end;
+}
+
+.action-btn {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #c0392b;
+  border: 3px solid #0d111a;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+  color: white;
+  font-size: 22px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  cursor: pointer; 
+}
+
+.action-btn.green {
+  background: #27ae60;
+  width: 70px;
+  height: 70px;
+  margin-bottom: 25px;
+}
+
+.action-btn:active {
+  transform: scale(0.92);
+  filter: brightness(1.2);
+}
