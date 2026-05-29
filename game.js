@@ -14,18 +14,19 @@ canvas.height = 760;
 let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
 let piece = null;
 let nextPiece = null; 
-let holdPiece = null; // Peça Guardada
-let canHold = true;   // Permissão para trocar a peça
+let holdPiece = null; 
+let canHold = true;   
 let gameOver = false;
 let score = 0;
-let highScore = localStorage.getItem('tetrisHighScore') || 0; // Recorde Salvo
-let level = 1; // Nível de dificuldade
+let highScore = localStorage.getItem('tetrisHighScore') || 0; 
+let level = 1; 
 let dropInterval = 600; 
 let animating = false;
 let linesToClear = [];
 let truckX = -80;
 let blocksFlying = [];
 let particles = [];
+let popups = []; // Controla as mensagens animadas
 let lineClearScore = 0;
 
 let trashStats = [0, 0, 0, 0]; 
@@ -33,6 +34,12 @@ let trashStats = [0, 0, 0, 0];
 const COLORS = ['#ff4757','#ffd93d','#2ed573','#1e90ff'];
 const BIN_NAMES = ['Plástico','Metal','Vidro','Papel'];
 const TRASH_ICONS = ['🥤', '🥫', '🍾', '📦'];
+const CURIOSIDADES = [
+  "PETRÓLEO POUPADO!", 
+  "ENERGIA ECONOMIZADA!", 
+  "100% RECICLADO!", 
+  "ÁRVORES SALVAS!"
+];
 
 const BIN_SIZE = 46;
 const BIN_X = [68, 134, 200, 266]; 
@@ -104,8 +111,26 @@ function merge() {
 
 function checkLines() {
   let lines = [];
-  for(let r=0; r<ROWS; r++)
-    if(board[r].every(cell => cell !== 0)) lines.push(r);
+  for(let r=0; r<ROWS; r++) {
+    if(board[r].every(cell => cell !== 0)) {
+      lines.push(r);
+      
+      // Verifica se a linha inteira é feita do mesmo material (Eco-Combo)
+      let firstColor = board[r][0];
+      let isCombo = board[r].every(cell => cell === firstColor);
+      
+      if (isCombo && firstColor > 0) {
+        popups.push({
+          x: BOARD_X + (COLS * BLOCK) / 2,
+          y: BOARD_Y + r * BLOCK,
+          text: `ECO-COMBO! ${CURIOSIDADES[firstColor-1]}`,
+          color: COLORS[firstColor-1],
+          life: 120
+        });
+        score += 500; // Bónus extra pelo combo
+      }
+    }
+  }
   
   if(lines.length === 0) { spawn(); return; }
   
@@ -119,7 +144,7 @@ function checkLines() {
 
 function spawn() {
   if(gameOver) return;
-  canHold = true; // Autoriza a troca sempre que nasce uma peça nova
+  canHold = true; 
 
   if (!nextPiece) {
     piece = randomPiece();
@@ -137,7 +162,6 @@ function spawn() {
   }
 }
 
-// Lógica para Trocar/Guardar a peça
 function hold() {
   if (!canHold || animating || gameOver || !piece) return;
 
@@ -196,7 +220,6 @@ function move(dir) {
   if(isValid(piece.shape, nx, piece.y)) piece.x = nx;
 }
 
-// Wall Kick incluído
 function rotate() {
   if(!piece || animating || gameOver) return;
   const shape = piece.shape;
@@ -213,7 +236,6 @@ function rotate() {
   }
 }
 
-// Aumento Progressivo de Dificuldade
 function updateDifficulty() {
   let newLevel = Math.floor(score / 1000) + 1; 
   if (newLevel > level) {
@@ -235,15 +257,19 @@ window.gameTimer = setInterval(() => {
 }, dropInterval);
 
 // ----------------------------------------------------
-// ANIMAÇÕES
+// ANIMAÇÕES E PARTÍCULAS
 // ----------------------------------------------------
-function addParticles(x, y, color, count=4) {
+function addParticles(x, y, colorIdx, count=4) {
   for(let i=0; i<count; i++) {
     particles.push({
       x, y,
       vx: (Math.random()-0.5)*4,
       vy: (Math.random()-0.5)*4 - 1.5,
-      life: 1, color: color, size: Math.random()*2+2
+      life: 1, 
+      colorIdx: colorIdx, 
+      size: Math.random()*3+3,
+      angle: Math.random() * Math.PI * 2,
+      spin: (Math.random()-0.5)*0.2
     });
   }
 }
@@ -251,9 +277,52 @@ function addParticles(x, y, color, count=4) {
 function updateParticles() {
   for(let i=particles.length-1; i>=0; i--) {
     let p = particles[i];
-    p.x += p.vx; p.y += p.vy; p.vy += 0.08; p.life -= 0.04;
+    p.x += p.vx; 
+    p.y += p.vy; 
+    
+    // Papel flutua de forma mais suave, outros materiais caem mais rápido
+    if (p.colorIdx === 3) p.vy += 0.02; 
+    else p.vy += 0.08; 
+    
+    p.angle += p.spin;
+    p.life -= 0.04;
     if(p.life <= 0) particles.splice(i,1);
   }
+}
+
+function drawParticles() {
+  for(let p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = COLORS[p.colorIdx];
+    ctx.strokeStyle = COLORS[p.colorIdx];
+    ctx.lineWidth = 2;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    ctx.beginPath();
+
+    if (p.colorIdx === 0) {
+      // Plástico: Bolhas transparentes vazadas
+      ctx.arc(0, 0, p.size, 0, Math.PI*2);
+      ctx.stroke();
+    } else if (p.colorIdx === 1) {
+      // Metal: Quadrados / Faíscas
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
+    } else if (p.colorIdx === 2) {
+      // Vidro: Estilhaços pontiagudos (Triângulos)
+      ctx.moveTo(0, -p.size);
+      ctx.lineTo(p.size, p.size);
+      ctx.lineTo(-p.size, p.size);
+      ctx.fill();
+    } else {
+      // Papel: Confetes flutuantes (Retângulos)
+      ctx.fillRect(-p.size, -p.size/2, p.size*2, p.size);
+    }
+    
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function updateAnimation() {
@@ -287,23 +356,24 @@ function updateAnimation() {
       b.progress += 0.06; 
       if(b.progress > 1) b.progress = 1;
       if(b.progress < 1) allDone = false;
-      if(Math.random() < 0.2) addParticles(b.x + (b.targetX - b.x) * b.progress, b.y + (b.targetY - b.y) * b.progress - 40 * Math.sin(b.progress * Math.PI), COLORS[b.colorIdx], 1);
+      // Gera partículas personalizadas baseadas no material do bloco
+      if(Math.random() < 0.2) {
+        addParticles(b.x + (b.targetX - b.x) * b.progress, b.y + (b.targetY - b.y) * b.progress - 40 * Math.sin(b.progress * Math.PI), b.colorIdx, 1);
+      }
     }
   }
   
   if(allDone) {
-    // 1. Apaga todas as linhas completas (de baixo para cima)
     linesToClear.sort((a,b)=>b-a);
     for(let row of linesToClear) {
       board.splice(row, 1);
     }
-    // 2. Adiciona as linhas novas vazias no topo
     for(let i = 0; i < linesToClear.length; i++) {
       board.unshift(Array(COLS).fill(0));
     }
     
     score += lineClearScore;
-    updateDifficulty(); // Sobe de nível consoante a pontuação
+    updateDifficulty(); 
     
     animating = false;
     linesToClear = [];
@@ -313,6 +383,30 @@ function updateAnimation() {
   updateParticles();
 }
 
+function drawPopups() {
+  for(let i = popups.length - 1; i >= 0; i--) {
+    let p = popups[i];
+    ctx.globalAlpha = Math.min(1, p.life / 30); 
+    ctx.fillStyle = p.color;
+    ctx.font = 'bold 16px "Orbitron", sans-serif';
+    ctx.textAlign = 'center';
+
+    // Contorno escuro para ler melhor
+    ctx.strokeStyle = '#000';
+    ctx.lineWidth = 3;
+    ctx.strokeText(p.text, p.x, p.y);
+    ctx.fillText(p.text, p.x, p.y);
+
+    p.y -= 0.5; 
+    p.life--;
+    if(p.life <= 0) popups.splice(i, 1);
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ----------------------------------------------------
+// RENDERIZAÇÃO ESTÁTICA
+// ----------------------------------------------------
 function drawBlock(x, y, colorIdx, isGhost=false) {
   let px = BOARD_X + x*BLOCK;
   let py = BOARD_Y + y*BLOCK;
@@ -388,14 +482,12 @@ function drawPiece() {
 }
 
 function drawSidebar() {
-  // Painel de Estatísticas Base
   ctx.fillStyle = '#111724';
   ctx.beginPath(); ctx.roundRect(SIDEBAR_X, BOARD_Y, 120, 130, 8); ctx.fill();
   ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
   
   ctx.textAlign = 'center';
   
-  // Recorde
   ctx.fillStyle = '#8f9bb3';
   ctx.font = '800 12px "Orbitron", sans-serif';
   ctx.fillText('RECORDE', SIDEBAR_X + 60, BOARD_Y + 20);
@@ -403,7 +495,6 @@ function drawSidebar() {
   ctx.font = 'bold 18px "Rajdhani", sans-serif';
   ctx.fillText(highScore, SIDEBAR_X + 60, BOARD_Y + 38);
 
-  // Pontuação Atual
   ctx.fillStyle = '#8f9bb3';
   ctx.font = '800 12px "Orbitron", sans-serif';
   ctx.fillText('PONTOS', SIDEBAR_X + 60, BOARD_Y + 65);
@@ -411,7 +502,6 @@ function drawSidebar() {
   ctx.font = 'bold 22px "Rajdhani", sans-serif';
   ctx.fillText(score, SIDEBAR_X + 60, BOARD_Y + 85);
 
-  // Nível Atual
   ctx.fillStyle = '#8f9bb3';
   ctx.font = '800 12px "Orbitron", sans-serif';
   ctx.fillText('NÍVEL', SIDEBAR_X + 60, BOARD_Y + 110);
@@ -419,7 +509,6 @@ function drawSidebar() {
   ctx.font = 'bold 16px "Rajdhani", sans-serif';
   ctx.fillText(level, SIDEBAR_X + 60, BOARD_Y + 125);
 
-  // Painel PRÓXIMO
   const NEXT_Y = BOARD_Y + 145;
   ctx.fillStyle = '#111724';
   ctx.beginPath(); ctx.roundRect(SIDEBAR_X, NEXT_Y, 120, 110, 8); ctx.fill();
@@ -449,7 +538,6 @@ function drawSidebar() {
     }
   }
 
-  // Painel GUARDAR
   const HOLD_Y = NEXT_Y + 125;
   ctx.fillStyle = '#111724';
   ctx.beginPath(); ctx.roundRect(SIDEBAR_X, HOLD_Y, 120, 110, 8); ctx.fill();
@@ -467,7 +555,6 @@ function drawSidebar() {
     const startX = SIDEBAR_X + (120 - sWidth) / 2;
     const startY = HOLD_Y + 35 + (75 - sHeight) / 2;
     
-    // Deixa transparente caso o jogador já tenha feito uma troca
     ctx.globalAlpha = canHold ? 1 : 0.3; 
     
     for(let r=0; r<shape.length; r++) {
@@ -559,17 +646,8 @@ function drawFlyingBlocks() {
   }
 }
 
-function drawParticles() {
-  for(let p of particles) {
-    ctx.globalAlpha = p.life;
-    ctx.fillStyle = p.color;
-    ctx.beginPath(); ctx.arc(p.x, p.y, p.size, 0, Math.PI*2); ctx.fill();
-  }
-  ctx.globalAlpha = 1;
-}
-
 // ----------------------------------------------------
-// GERENCIADOR UNIVERSAL DE BOTÕES (MOUSE + TOUCH)
+// GERENCIADOR DE INPUTS (MOUSE + TOUCH)
 // ----------------------------------------------------
 function bindUniversalButton(id, action, continuous = false) {
   const btn = document.getElementById(id);
@@ -604,13 +682,19 @@ function bindUniversalButton(id, action, continuous = false) {
   btn.addEventListener('mouseleave', stopAction);
 }
 
+// Ouve cliques no Canvas inteiro (Resolve o Bug do Game Over)
+canvas.addEventListener('click', () => { if(gameOver) restartGame(); });
+canvas.addEventListener('touchstart', (e) => { 
+  if(gameOver) { e.preventDefault(); restartGame(); } 
+}, {passive: false});
+
 bindUniversalButton('btn-left', () => move(-1), true);
 bindUniversalButton('btn-right', () => move(1), true);
 bindUniversalButton('btn-down', () => drop(true), true); 
 bindUniversalButton('btn-up', rotate, false);
 bindUniversalButton('btn-rotate', rotate, false);
 bindUniversalButton('btn-drop', hardDrop, false);
-bindUniversalButton('btn-hold', hold, false); // Evento do botão Guardar
+bindUniversalButton('btn-hold', hold, false); 
 
 document.addEventListener('keydown', e => {
   if(e.key === 'ArrowLeft') move(-1);
@@ -618,20 +702,16 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowDown') drop(true);
   if(e.key === 'ArrowUp') rotate();
   if(e.key === ' ') { e.preventDefault(); hardDrop(); }
-  if(e.key === 'Shift' || e.key.toLowerCase() === 'c') hold(); // Atalhos de Teclado Guardar (PC)
+  if(e.key === 'Shift' || e.key.toLowerCase() === 'c') hold();
 });
 
 function restartGame() {
   board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
-  piece = null; nextPiece = null; gameOver = false;
-  score = 0; trashStats = [0, 0, 0, 0];
-  shapeBag = []; colorBag = [];
-  animating = false; linesToClear = []; blocksFlying = []; particles = [];
+  piece = null; nextPiece = null; holdPiece = null; gameOver = false;
+  score = 0; level = 1; trashStats = [0, 0, 0, 0];
+  shapeBag = []; colorBag = []; canHold = true;
+  animating = false; linesToClear = []; blocksFlying = []; particles = []; popups = [];
   
-  // Reseta estado avançado
-  holdPiece = null;
-  canHold = true;
-  level = 1;
   dropInterval = 600;
   clearInterval(window.gameTimer);
   window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
@@ -653,14 +733,42 @@ function renderLoop() {
   drawTrucks(); 
   drawFlyingBlocks();
   drawParticles();
+  drawPopups();
   
+  // TELA DE DIAGNÓSTICO (GAME OVER ECOLÓGICO)
   if(gameOver) {
-    ctx.fillStyle = 'rgba(10, 15, 25, 0.9)';
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.95)';
     ctx.fillRect(0,0,canvas.width,canvas.height);
-    ctx.fillStyle = '#ff4757'; ctx.font = 'bold 40px "Orbitron", sans-serif';
-    ctx.textAlign = 'center'; ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 20);
-    ctx.fillStyle = '#2ed573'; ctx.font = '18px "Rajdhani", sans-serif';
-    ctx.fillText('Toque para reiniciar', canvas.width/2, canvas.height/2 + 25);
+    
+    ctx.fillStyle = '#ff4757'; 
+    ctx.font = 'bold 36px "Orbitron", sans-serif';
+    ctx.textAlign = 'center'; 
+    ctx.fillText('DIAGNÓSTICO', canvas.width/2, 100);
+    
+    ctx.fillStyle = '#fff'; 
+    ctx.font = '18px "Rajdhani", sans-serif';
+    ctx.fillText('Seu impacto ambiental final:', canvas.width/2, 140);
+    
+    // Lista de métricas de resíduos
+    ctx.fillStyle = COLORS[0];
+    ctx.fillText(`🥤 Plástico: ${trashStats[0]} un = -${(trashStats[0]*0.2).toFixed(1)}kg de petróleo`, canvas.width/2, 220);
+    
+    ctx.fillStyle = COLORS[1];
+    ctx.fillText(`🥫 Metal: ${trashStats[1]} un = +${trashStats[1]*3} horas de energia`, canvas.width/2, 270);
+    
+    ctx.fillStyle = COLORS[2];
+    ctx.fillText(`🍾 Vidro: ${trashStats[2]} un = 100% reutilizado`, canvas.width/2, 320);
+    
+    ctx.fillStyle = COLORS[3];
+    ctx.fillText(`📦 Papel: ${trashStats[3]} un = ${(trashStats[3]*0.05).toFixed(1)} árvores salvas`, canvas.width/2, 370);
+
+    ctx.fillStyle = '#f39c12'; 
+    ctx.font = 'bold 24px "Orbitron", sans-serif';
+    ctx.fillText(`PONTOS TOTAIS: ${score}`, canvas.width/2, 450);
+
+    ctx.fillStyle = '#2ed573'; 
+    ctx.font = 'bold 20px "Rajdhani", sans-serif';
+    ctx.fillText('Toque AQUI na tela para reiniciar!', canvas.width/2, 530);
   }
   
   requestAnimationFrame(renderLoop);
