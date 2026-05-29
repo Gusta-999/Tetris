@@ -135,3 +135,80 @@ canvas {
   transform: scale(0.92);
   filter: brightness(1.2);
 }
+
+/* --- ESTILOS DO MENU DE PAUSA --- */
+#btn-pause-float {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  width: 50px;
+  height: 50px;
+  background: #2a3553;
+  border: 2px solid #0d111a;
+  border-radius: 50%;
+  color: white;
+  font-size: 20px;
+  z-index: 100;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#btn-pause-float:active {
+  transform: scale(0.9);
+  background: #3d4c70;
+}
+
+#pause-menu {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: rgba(10, 15, 25, 0.9);
+  z-index: 200;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#pause-menu.hidden {
+  display: none;
+}
+
+.pause-content {
+  background: #111724;
+  padding: 40px;
+  border-radius: 15px;
+  border: 2px solid #2a3553;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+  width: 80%;
+  max-width: 350px;
+}
+
+.pause-content h2 {
+  color: #ff4757;
+  font-family: 'Orbitron', sans-serif;
+  margin-bottom: 30px;
+  font-size: 32px;
+}
+
+.menu-btn {
+  display: block;
+  width: 100%;
+  padding: 15px 20px;
+  margin-bottom: 15px;
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 20px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+}
+
+.menu-btn.green-btn { background: #27ae60; }
+.menu-btn.red-btn { background: #c0392b; }
+
+.menu-btn:active { transform: scale(0.95); filter: brightness(1.2); }

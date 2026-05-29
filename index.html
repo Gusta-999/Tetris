@@ -8,6 +8,26 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Tetris Sustentável</title>
+  
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <button id="btn-pause-float">⏸️</button>
+
+  <div id="pause-menu" class="hidden">
+    <div class="pause-content">
+      <h2>PAUSADO</h2>
+      <button id="btn-resume" class="menu-btn green-btn">▶ CONTINUAR</button>
+      <button id="btn-restart-menu" class="menu-btn red-btn">🔄 REINICIAR</button>
+    </div>
+  </div>
 
   <div id="game-container">
     <canvas id="tetris"></canvas>

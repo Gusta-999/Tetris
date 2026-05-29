@@ -17,6 +17,7 @@ let nextPiece = null;
 let holdPiece = null; 
 let canHold = true;   
 let gameOver = false;
+let isPaused = false; 
 let score = 0;
 let highScore = localStorage.getItem('tetrisHighScore') || 0; 
 let level = 1; 
@@ -26,7 +27,7 @@ let linesToClear = [];
 let truckX = -80;
 let blocksFlying = [];
 let particles = [];
-let popups = []; // Controla as mensagens animadas
+let popups = []; 
 let lineClearScore = 0;
 
 let trashStats = [0, 0, 0, 0]; 
@@ -55,7 +56,6 @@ const PIECES = [
   [[0,1,1],[1,1,0]]  
 ];
 
-// ---------- SISTEMA DE "BAG" OFICIAL ----------
 let shapeBag = [];
 let colorBag = [];
 
@@ -89,7 +89,6 @@ function randomPiece() {
   };
 }
 
-// ---------- LÓGICA DE JOGO ----------
 function isValid(shape, x, y) {
   for(let r=0; r<shape.length; r++)
     for(let c=0; c<shape[0].length; c++)
@@ -114,8 +113,6 @@ function checkLines() {
   for(let r=0; r<ROWS; r++) {
     if(board[r].every(cell => cell !== 0)) {
       lines.push(r);
-      
-      // Verifica se a linha inteira é feita do mesmo material (Eco-Combo)
       let firstColor = board[r][0];
       let isCombo = board[r].every(cell => cell === firstColor);
       
@@ -127,7 +124,7 @@ function checkLines() {
           color: COLORS[firstColor-1],
           life: 120
         });
-        score += 500; // Bónus extra pelo combo
+        score += 500; 
       }
     }
   }
@@ -143,7 +140,7 @@ function checkLines() {
 }
 
 function spawn() {
-  if(gameOver) return;
+  if(gameOver || isPaused) return;
   canHold = true; 
 
   if (!nextPiece) {
@@ -163,7 +160,7 @@ function spawn() {
 }
 
 function hold() {
-  if (!canHold || animating || gameOver || !piece) return;
+  if (!canHold || animating || gameOver || isPaused || !piece) return;
 
   if (holdPiece === null) {
     holdPiece = { shape: piece.shape, color: piece.color };
@@ -191,7 +188,7 @@ function hold() {
 }
 
 function drop(isSoftDrop = false) {
-  if(!piece || animating || gameOver) return false;
+  if(!piece || animating || gameOver || isPaused) return false;
   const ny = piece.y + 1;
   if(isValid(piece.shape, piece.x, ny)) {
     piece.y = ny;
@@ -204,7 +201,7 @@ function drop(isSoftDrop = false) {
 }
 
 function hardDrop() {
-  if(!piece || animating || gameOver) return;
+  if(!piece || animating || gameOver || isPaused) return;
   let distance = 0;
   while(isValid(piece.shape, piece.x, piece.y + 1)) {
     piece.y++;
@@ -215,13 +212,13 @@ function hardDrop() {
 }
 
 function move(dir) {
-  if(!piece || animating || gameOver) return;
+  if(!piece || animating || gameOver || isPaused) return;
   const nx = piece.x + dir;
   if(isValid(piece.shape, nx, piece.y)) piece.x = nx;
 }
 
 function rotate() {
-  if(!piece || animating || gameOver) return;
+  if(!piece || animating || gameOver || isPaused) return;
   const shape = piece.shape;
   const rotated = shape[0].map((_, idx) => shape.map(row => row[idx]).reverse());
   
@@ -242,34 +239,56 @@ function updateDifficulty() {
     level = newLevel;
     dropInterval = Math.max(100, 600 - (level - 1) * 50); 
     clearInterval(window.gameTimer);
-    window.gameTimer = setInterval(() => {
-      drop(false);
-    }, dropInterval);
+    window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
   }
 }
 
 // ----------------------------------------------------
-// MOTOR DE GRAVIDADE
+// GERENCIAMENTO DA PAUSA
 // ----------------------------------------------------
-if (window.gameTimer) clearInterval(window.gameTimer);
-window.gameTimer = setInterval(() => {
-  drop(false);
-}, dropInterval);
+function togglePause() {
+  if (gameOver) return;
+  isPaused = !isPaused;
+  
+  const pauseMenu = document.getElementById('pause-menu');
+  const btnPauseFloat = document.getElementById('btn-pause-float');
+
+  if (isPaused) {
+    pauseMenu.classList.remove('hidden');
+    btnPauseFloat.style.display = 'none'; 
+    clearInterval(window.gameTimer);      
+  } else {
+    pauseMenu.classList.add('hidden');
+    btnPauseFloat.style.display = 'flex';
+    clearInterval(window.gameTimer);
+    window.gameTimer = setInterval(() => { drop(false); }, dropInterval); 
+  }
+}
+
+document.getElementById('btn-pause-float').addEventListener('click', (e) => { 
+  e.target.blur(); 
+  togglePause(); 
+});
+document.getElementById('btn-resume').addEventListener('click', togglePause);
+document.getElementById('btn-restart-menu').addEventListener('click', () => {
+  togglePause(); 
+  restartGame();
+});
 
 // ----------------------------------------------------
-// ANIMAÇÕES E PARTÍCULAS
+// MOTOR DE GRAVIDADE E ANIMAÇÕES
 // ----------------------------------------------------
+if (window.gameTimer) clearInterval(window.gameTimer);
+window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
+
 function addParticles(x, y, colorIdx, count=4) {
   for(let i=0; i<count; i++) {
     particles.push({
       x, y,
       vx: (Math.random()-0.5)*4,
       vy: (Math.random()-0.5)*4 - 1.5,
-      life: 1, 
-      colorIdx: colorIdx, 
-      size: Math.random()*3+3,
-      angle: Math.random() * Math.PI * 2,
-      spin: (Math.random()-0.5)*0.2
+      life: 1, colorIdx: colorIdx, size: Math.random()*3+3,
+      angle: Math.random() * Math.PI * 2, spin: (Math.random()-0.5)*0.2
     });
   }
 }
@@ -280,56 +299,23 @@ function updateParticles() {
     p.x += p.vx; 
     p.y += p.vy; 
     
-    // Papel flutua de forma mais suave, outros materiais caem mais rápido
-    if (p.colorIdx === 3) p.vy += 0.02; 
-    else p.vy += 0.08; 
-    
-    p.angle += p.spin;
-    p.life -= 0.04;
-    if(p.life <= 0) particles.splice(i,1);
-  }
-}
-
-function drawParticles() {
-  for(let p of particles) {
-    ctx.globalAlpha = p.life;
-    ctx.fillStyle = COLORS[p.colorIdx];
-    ctx.strokeStyle = COLORS[p.colorIdx];
-    ctx.lineWidth = 2;
-
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.angle);
-    ctx.beginPath();
-
-    if (p.colorIdx === 0) {
-      // Plástico: Bolhas transparentes vazadas
-      ctx.arc(0, 0, p.size, 0, Math.PI*2);
-      ctx.stroke();
-    } else if (p.colorIdx === 1) {
-      // Metal: Quadrados / Faíscas
-      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size);
-    } else if (p.colorIdx === 2) {
-      // Vidro: Estilhaços pontiagudos (Triângulos)
-      ctx.moveTo(0, -p.size);
-      ctx.lineTo(p.size, p.size);
-      ctx.lineTo(-p.size, p.size);
-      ctx.fill();
+    if (p.colorIdx === 3) {
+      p.vy += 0.02; 
     } else {
-      // Papel: Confetes flutuantes (Retângulos)
-      ctx.fillRect(-p.size, -p.size/2, p.size*2, p.size);
+      p.vy += 0.08; 
     }
     
-    ctx.restore();
+    p.angle += p.spin; 
+    p.life -= 0.04;
+    
+    if(p.life <= 0) particles.splice(i,1);
   }
-  ctx.globalAlpha = 1;
 }
 
 function updateAnimation() {
   if(!animating) return;
   
   truckX += 6.5; 
-  
   for (let row of linesToClear) {
     for(let c = 0; c < COLS; c++) {
       let blockCanvasX = BOARD_X + c * BLOCK + BLOCK/2;
@@ -339,9 +325,13 @@ function updateAnimation() {
           if(colorIdx >= 0) {
             trashStats[colorIdx]++;
             blocksFlying.push({
-              c: c, r: row, x: blockCanvasX, y: BOARD_Y + row * BLOCK + BLOCK/2,
+              c: c, 
+              r: row, 
+              x: blockCanvasX, 
+              y: BOARD_Y + row * BLOCK + BLOCK/2,
               colorIdx: colorIdx, 
-              targetX: BIN_X[colorIdx] + BIN_SIZE/2, targetY: BIN_Y + BIN_SIZE/2,
+              targetX: BIN_X[colorIdx] + BIN_SIZE/2, 
+              targetY: BIN_Y + BIN_SIZE/2, 
               progress: 0
             });
           }
@@ -356,7 +346,6 @@ function updateAnimation() {
       b.progress += 0.06; 
       if(b.progress > 1) b.progress = 1;
       if(b.progress < 1) allDone = false;
-      // Gera partículas personalizadas baseadas no material do bloco
       if(Math.random() < 0.2) {
         addParticles(b.x + (b.targetX - b.x) * b.progress, b.y + (b.targetY - b.y) * b.progress - 40 * Math.sin(b.progress * Math.PI), b.colorIdx, 1);
       }
@@ -365,22 +354,52 @@ function updateAnimation() {
   
   if(allDone) {
     linesToClear.sort((a,b)=>b-a);
-    for(let row of linesToClear) {
-      board.splice(row, 1);
+    for(let row of linesToClear) { 
+      board.splice(row, 1); 
     }
-    for(let i = 0; i < linesToClear.length; i++) {
-      board.unshift(Array(COLS).fill(0));
+    for(let i = 0; i < linesToClear.length; i++) { 
+      board.unshift(Array(COLS).fill(0)); 
     }
     
     score += lineClearScore;
     updateDifficulty(); 
     
-    animating = false;
-    linesToClear = [];
+    animating = false; 
+    linesToClear = []; 
     blocksFlying = [];
     spawn();
   }
-  updateParticles();
+}
+
+function drawParticles() {
+  for(let p of particles) {
+    ctx.globalAlpha = p.life;
+    ctx.fillStyle = COLORS[p.colorIdx];
+    ctx.strokeStyle = COLORS[p.colorIdx];
+    ctx.lineWidth = 2;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle);
+    ctx.beginPath();
+    
+    if (p.colorIdx === 0) { 
+      ctx.arc(0, 0, p.size, 0, Math.PI*2); 
+      ctx.stroke(); 
+    } else if (p.colorIdx === 1) { 
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size); 
+    } else if (p.colorIdx === 2) { 
+      ctx.moveTo(0, -p.size); 
+      ctx.lineTo(p.size, p.size); 
+      ctx.lineTo(-p.size, p.size); 
+      ctx.fill(); 
+    } else { 
+      ctx.fillRect(-p.size, -p.size/2, p.size*2, p.size); 
+    }
+    
+    ctx.restore();
+  }
+  ctx.globalAlpha = 1;
 }
 
 function drawPopups() {
@@ -390,23 +409,20 @@ function drawPopups() {
     ctx.fillStyle = p.color;
     ctx.font = 'bold 16px "Orbitron", sans-serif';
     ctx.textAlign = 'center';
-
-    // Contorno escuro para ler melhor
     ctx.strokeStyle = '#000';
     ctx.lineWidth = 3;
     ctx.strokeText(p.text, p.x, p.y);
     ctx.fillText(p.text, p.x, p.y);
 
-    p.y -= 0.5; 
-    p.life--;
-    if(p.life <= 0) popups.splice(i, 1);
+    if(!isPaused) { 
+      p.y -= 0.5; 
+      p.life--;
+      if(p.life <= 0) popups.splice(i, 1);
+    }
   }
   ctx.globalAlpha = 1;
 }
 
-// ----------------------------------------------------
-// RENDERIZAÇÃO ESTÁTICA
-// ----------------------------------------------------
 function drawBlock(x, y, colorIdx, isGhost=false) {
   let px = BOARD_X + x*BLOCK;
   let py = BOARD_Y + y*BLOCK;
@@ -421,31 +437,31 @@ function drawBlock(x, y, colorIdx, isGhost=false) {
 
   ctx.fillStyle = '#fff';
   ctx.font = '26px "Segoe UI Emoji", sans-serif'; 
-  ctx.textAlign = 'center';
+  ctx.textAlign = 'center'; 
   ctx.textBaseline = 'middle';
-  
-  ctx.shadowColor = 'rgba(0,0,0,0.8)';
+  ctx.shadowColor = 'rgba(0,0,0,0.8)'; 
   ctx.shadowBlur = 4; 
   ctx.fillText(TRASH_ICONS[colorIdx], px + BLOCK/2, py + BLOCK/2 + 2);
   ctx.shadowBlur = 0; 
 }
 
 function drawBoard() {
-  ctx.fillStyle = 'rgba(15, 20, 30, 0.7)';
+  ctx.fillStyle = 'rgba(15, 20, 30, 0.7)'; 
   ctx.fillRect(BOARD_X, BOARD_Y, COLS*BLOCK, ROWS*BLOCK);
   
-  ctx.strokeStyle = 'rgba(255,255,255,0.06)';
-  ctx.lineWidth = 1;
+  ctx.strokeStyle = 'rgba(255,255,255,0.06)'; 
+  ctx.lineWidth = 1; 
   ctx.beginPath();
-  for(let c=1; c<COLS; c++) {
-    let lx = BOARD_X + c*BLOCK + 0.5;
-    ctx.moveTo(lx, BOARD_Y);
-    ctx.lineTo(lx, BOARD_Y + ROWS*BLOCK);
+  
+  for(let c=1; c<COLS; c++) { 
+    let lx = BOARD_X + c*BLOCK + 0.5; 
+    ctx.moveTo(lx, BOARD_Y); 
+    ctx.lineTo(lx, BOARD_Y + ROWS*BLOCK); 
   }
-  for(let r=1; r<ROWS; r++) {
-    let ly = BOARD_Y + r*BLOCK + 0.5;
-    ctx.moveTo(BOARD_X, ly);
-    ctx.lineTo(BOARD_X + COLS*BLOCK, ly);
+  for(let r=1; r<ROWS; r++) { 
+    let ly = BOARD_Y + r*BLOCK + 0.5; 
+    ctx.moveTo(BOARD_X, ly); 
+    ctx.lineTo(BOARD_X + COLS*BLOCK, ly); 
   }
   ctx.stroke();
 
@@ -453,16 +469,15 @@ function drawBoard() {
     for(let c=0; c<COLS; c++) {
       if(board[r][c]) {
         let isCollected = false;
-        if (animating && linesToClear.includes(r)) {
-           if (truckX + 20 > BOARD_X + c * BLOCK + BLOCK/2) isCollected = true;
+        if (animating && linesToClear.includes(r)) { 
+          if (truckX + 20 > BOARD_X + c * BLOCK + BLOCK/2) isCollected = true; 
         }
         if(!isCollected) drawBlock(c, r, board[r][c]-1, false);
       }
     }
   }
-  
-  ctx.strokeStyle = '#3d4c70';
-  ctx.lineWidth = 2;
+  ctx.strokeStyle = '#3d4c70'; 
+  ctx.lineWidth = 2; 
   ctx.strokeRect(BOARD_X, BOARD_Y, COLS*BLOCK, ROWS*BLOCK);
 }
 
@@ -472,6 +487,7 @@ function drawPiece() {
   
   let ghostY = y;
   while(isValid(shape, x, ghostY + 1)) ghostY++;
+  
   for(let r=0; r<shape.length; r++)
     for(let c=0; c<shape[0].length; c++)
       if(shape[r][c]) drawBlock(x+c, ghostY+r, color, true);
@@ -482,56 +498,64 @@ function drawPiece() {
 }
 
 function drawSidebar() {
-  ctx.fillStyle = '#111724';
-  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, BOARD_Y, 120, 130, 8); ctx.fill();
-  ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
-  
+  ctx.fillStyle = '#111724'; 
+  ctx.beginPath(); 
+  ctx.roundRect(SIDEBAR_X, BOARD_Y, 120, 130, 8); 
+  ctx.fill();
+  ctx.strokeStyle = '#2a3553'; 
+  ctx.lineWidth = 2; 
+  ctx.stroke();
   ctx.textAlign = 'center';
   
-  ctx.fillStyle = '#8f9bb3';
-  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillStyle = '#8f9bb3'; 
+  ctx.font = '800 12px "Orbitron", sans-serif'; 
   ctx.fillText('RECORDE', SIDEBAR_X + 60, BOARD_Y + 20);
-  ctx.fillStyle = '#f39c12';
-  ctx.font = 'bold 18px "Rajdhani", sans-serif';
+  
+  ctx.fillStyle = '#f39c12'; 
+  ctx.font = 'bold 18px "Rajdhani", sans-serif'; 
   ctx.fillText(highScore, SIDEBAR_X + 60, BOARD_Y + 38);
-
-  ctx.fillStyle = '#8f9bb3';
-  ctx.font = '800 12px "Orbitron", sans-serif';
+  
+  ctx.fillStyle = '#8f9bb3'; 
+  ctx.font = '800 12px "Orbitron", sans-serif'; 
   ctx.fillText('PONTOS', SIDEBAR_X + 60, BOARD_Y + 65);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 22px "Rajdhani", sans-serif';
+  
+  ctx.fillStyle = '#fff'; 
+  ctx.font = 'bold 22px "Rajdhani", sans-serif'; 
   ctx.fillText(score, SIDEBAR_X + 60, BOARD_Y + 85);
-
-  ctx.fillStyle = '#8f9bb3';
-  ctx.font = '800 12px "Orbitron", sans-serif';
+  
+  ctx.fillStyle = '#8f9bb3'; 
+  ctx.font = '800 12px "Orbitron", sans-serif'; 
   ctx.fillText('NÍVEL', SIDEBAR_X + 60, BOARD_Y + 110);
-  ctx.fillStyle = '#2ed573';
-  ctx.font = 'bold 16px "Rajdhani", sans-serif';
+  
+  ctx.fillStyle = '#2ed573'; 
+  ctx.font = 'bold 16px "Rajdhani", sans-serif'; 
   ctx.fillText(level, SIDEBAR_X + 60, BOARD_Y + 125);
 
   const NEXT_Y = BOARD_Y + 145;
-  ctx.fillStyle = '#111724';
-  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, NEXT_Y, 120, 110, 8); ctx.fill();
-  ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
-  
-  ctx.fillStyle = '#8f9bb3';
-  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillStyle = '#111724'; 
+  ctx.beginPath(); 
+  ctx.roundRect(SIDEBAR_X, NEXT_Y, 120, 110, 8); 
+  ctx.fill();
+  ctx.strokeStyle = '#2a3553'; 
+  ctx.lineWidth = 2; 
+  ctx.stroke();
+  ctx.fillStyle = '#8f9bb3'; 
+  ctx.font = '800 12px "Orbitron", sans-serif'; 
   ctx.fillText('PRÓXIMO', SIDEBAR_X + 60, NEXT_Y + 25);
 
   if (nextPiece) {
-    const shape = nextPiece.shape;
+    const shape = nextPiece.shape; 
     const pSize = 22; 
-    const sWidth = shape[0].length * pSize;
-    const sHeight = shape.length * pSize;
-    const startX = SIDEBAR_X + (120 - sWidth) / 2;
-    const startY = NEXT_Y + 35 + (75 - sHeight) / 2;
+    const startX = SIDEBAR_X + (120 - shape[0].length * pSize) / 2;
+    const startY = NEXT_Y + 35 + (75 - shape.length * pSize) / 2;
     
     for(let r=0; r<shape.length; r++) {
       for(let c=0; c<shape[0].length; c++) {
         if(shape[r][c]) {
-          ctx.fillStyle = '#fff';
+          ctx.fillStyle = '#fff'; 
           ctx.font = '18px "Segoe UI Emoji", sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center'; 
+          ctx.textBaseline = 'middle';
           ctx.fillText(TRASH_ICONS[nextPiece.color], startX + c*pSize + pSize/2, startY + r*pSize + pSize/2 + 2);
         }
       }
@@ -539,30 +563,32 @@ function drawSidebar() {
   }
 
   const HOLD_Y = NEXT_Y + 125;
-  ctx.fillStyle = '#111724';
-  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, HOLD_Y, 120, 110, 8); ctx.fill();
-  ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
-  
-  ctx.fillStyle = '#8f9bb3';
-  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillStyle = '#111724'; 
+  ctx.beginPath(); 
+  ctx.roundRect(SIDEBAR_X, HOLD_Y, 120, 110, 8); 
+  ctx.fill();
+  ctx.strokeStyle = '#2a3553'; 
+  ctx.lineWidth = 2; 
+  ctx.stroke();
+  ctx.fillStyle = '#8f9bb3'; 
+  ctx.font = '800 12px "Orbitron", sans-serif'; 
   ctx.fillText('GUARDAR', SIDEBAR_X + 60, HOLD_Y + 25);
 
   if (holdPiece) {
-    const shape = holdPiece.shape;
+    const shape = holdPiece.shape; 
     const pSize = 22; 
-    const sWidth = shape[0].length * pSize;
-    const sHeight = shape.length * pSize;
-    const startX = SIDEBAR_X + (120 - sWidth) / 2;
-    const startY = HOLD_Y + 35 + (75 - sHeight) / 2;
+    const startX = SIDEBAR_X + (120 - shape[0].length * pSize) / 2;
+    const startY = HOLD_Y + 35 + (75 - shape.length * pSize) / 2;
     
     ctx.globalAlpha = canHold ? 1 : 0.3; 
     
     for(let r=0; r<shape.length; r++) {
       for(let c=0; c<shape[0].length; c++) {
         if(shape[r][c]) {
-          ctx.fillStyle = '#fff';
+          ctx.fillStyle = '#fff'; 
           ctx.font = '18px "Segoe UI Emoji", sans-serif';
-          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.textAlign = 'center'; 
+          ctx.textBaseline = 'middle';
           ctx.fillText(TRASH_ICONS[holdPiece.color], startX + c*pSize + pSize/2, startY + r*pSize + pSize/2 + 2);
         }
       }
@@ -573,41 +599,50 @@ function drawSidebar() {
 
 function drawBins() {
   for(let i=0; i<4; i++) {
-    let bx = BIN_X[i];
+    let bx = BIN_X[i]; 
     let by = BIN_Y;
     
-    ctx.fillStyle = COLORS[i];
-    ctx.beginPath();
+    ctx.fillStyle = COLORS[i]; 
+    ctx.beginPath(); 
     ctx.moveTo(bx + 4, by + 8); 
     ctx.lineTo(bx + BIN_SIZE - 4, by + 8); 
     ctx.lineTo(bx + BIN_SIZE - 8, by + BIN_SIZE); 
     ctx.lineTo(bx + 8, by + BIN_SIZE); 
     ctx.fill();
     
-    ctx.beginPath(); ctx.roundRect(bx, by, BIN_SIZE, 6, 2); ctx.fill();
+    ctx.beginPath(); 
+    ctx.roundRect(bx, by, BIN_SIZE, 6, 2); 
+    ctx.fill(); 
     ctx.fillRect(bx + BIN_SIZE/2 - 6, by - 4, 12, 4);
     
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(bx + 14, by + 12, 2, BIN_SIZE - 16);
-    ctx.fillRect(bx + 22, by + 12, 2, BIN_SIZE - 16);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)'; 
+    ctx.fillRect(bx + 14, by + 12, 2, BIN_SIZE - 16); 
+    ctx.fillRect(bx + 22, by + 12, 2, BIN_SIZE - 16); 
     ctx.fillRect(bx + 30, by + 12, 2, BIN_SIZE - 16);
     
-    ctx.fillStyle = '#8f9bb3';
-    ctx.font = '800 11px "Orbitron", sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'bottom';
+    ctx.fillStyle = '#8f9bb3'; 
+    ctx.font = '800 11px "Orbitron", sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.textBaseline = 'bottom'; 
     ctx.fillText(BIN_NAMES[i].toUpperCase(), bx+BIN_SIZE/2, by-8);
     
-    ctx.fillStyle = 'rgba(255,255,255,0.9)';
-    ctx.font = '18px sans-serif'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'rgba(255,255,255,0.9)'; 
+    ctx.font = '18px sans-serif'; 
+    ctx.textBaseline = 'middle'; 
     ctx.fillText('♻', bx+BIN_SIZE/2, by+BIN_SIZE/2 + 6);
 
     let panelY = by + BIN_SIZE + 8;
-    ctx.fillStyle = '#0a0e14';
-    ctx.beginPath(); ctx.roundRect(bx - 5, panelY, BIN_SIZE + 10, 20, 4); ctx.fill();
-    ctx.strokeStyle = COLORS[i]; ctx.lineWidth = 1; ctx.stroke();
+    ctx.fillStyle = '#0a0e14'; 
+    ctx.beginPath(); 
+    ctx.roundRect(bx - 5, panelY, BIN_SIZE + 10, 20, 4); 
+    ctx.fill();
     
-    ctx.fillStyle = COLORS[i];
-    ctx.font = 'bold 14px "Orbitron", monospace';
+    ctx.strokeStyle = COLORS[i]; 
+    ctx.lineWidth = 1; 
+    ctx.stroke();
+    
+    ctx.fillStyle = COLORS[i]; 
+    ctx.font = 'bold 14px "Orbitron", monospace'; 
     ctx.fillText(trashStats[i].toString().padStart(3, '0'), bx+BIN_SIZE/2, panelY + 11);
   }
   ctx.textBaseline = 'alphabetic'; 
@@ -617,37 +652,42 @@ function drawTrucks() {
   if (!animating) return;
   for (let row of linesToClear) {
     const ty = BOARD_Y + row * BLOCK + 3;
-    ctx.save();
-    ctx.fillStyle = '#ecf0f1';
-    ctx.fillRect(truckX - 22, ty, 44, 18);
-    ctx.fillStyle = '#bdc3c7';
-    ctx.fillRect(truckX + 12, ty - 2, 12, 20);
-    ctx.fillStyle = '#3498db';
-    ctx.fillRect(truckX + 15, ty + 1, 7, 7);
-    ctx.fillStyle = '#2ecc71';
-    ctx.fillRect(truckX - 20, ty + 2, 16, 14);
-    ctx.fillStyle = '#2c3e50';
-    ctx.beginPath(); ctx.arc(truckX - 12, ty + 18, 4, 0, Math.PI*2); ctx.arc(truckX + 6, ty + 18, 4, 0, Math.PI*2); ctx.fill();
+    ctx.save(); 
+    ctx.fillStyle = '#ecf0f1'; 
+    ctx.fillRect(truckX - 22, ty, 44, 18); 
+    ctx.fillStyle = '#bdc3c7'; 
+    ctx.fillRect(truckX + 12, ty - 2, 12, 20); 
+    ctx.fillStyle = '#3498db'; 
+    ctx.fillRect(truckX + 15, ty + 1, 7, 7); 
+    ctx.fillStyle = '#2ecc71'; 
+    ctx.fillRect(truckX - 20, ty + 2, 16, 14); 
+    ctx.fillStyle = '#2c3e50'; 
+    ctx.beginPath(); 
+    ctx.arc(truckX - 12, ty + 18, 4, 0, Math.PI*2); 
+    ctx.arc(truckX + 6, ty + 18, 4, 0, Math.PI*2); 
+    ctx.fill(); 
     ctx.restore();
   }
 }
 
 function drawFlyingBlocks() {
   for(let b of blocksFlying) {
-    let t = b.progress;
+    let t = b.progress; 
     if(t <= 0) continue;
-    let cx = b.x + (b.targetX - b.x) * t;
+    
+    let cx = b.x + (b.targetX - b.x) * t; 
     let cy = b.y + (b.targetY - b.y) * t - 45 * Math.sin(t * Math.PI);
     
-    ctx.fillStyle = '#fff';
-    ctx.font = '20px "Segoe UI Emoji", sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillStyle = '#fff'; 
+    ctx.font = '20px "Segoe UI Emoji", sans-serif'; 
+    ctx.textAlign = 'center'; 
+    ctx.textBaseline = 'middle'; 
     ctx.fillText(TRASH_ICONS[b.colorIdx], cx, cy);
   }
 }
 
 // ----------------------------------------------------
-// GERENCIADOR DE INPUTS (MOUSE + TOUCH)
+// GERENCIADOR DE INPUTS
 // ----------------------------------------------------
 function bindUniversalButton(id, action, continuous = false) {
   const btn = document.getElementById(id);
@@ -656,34 +696,32 @@ function bindUniversalButton(id, action, continuous = false) {
   const startAction = (e) => {
     if(e.type === 'touchstart') e.preventDefault(); 
     if (gameOver) return restartGame();
-    clearTimeout(timeout);
+    clearTimeout(timeout); 
     clearInterval(interval);
     
     action();
-    if (continuous) {
-      timeout = setTimeout(() => {
-        interval = setInterval(action, 70); 
-      }, 150); 
+    if (continuous) { 
+      timeout = setTimeout(() => { interval = setInterval(action, 70); }, 150); 
     }
   };
 
   const stopAction = (e) => {
     if(e && e.type === 'touchend') e.preventDefault();
-    clearTimeout(timeout);
+    clearTimeout(timeout); 
     clearInterval(interval);
   };
 
-  btn.addEventListener('touchstart', startAction, {passive: false});
-  btn.addEventListener('touchend', stopAction, {passive: false});
+  btn.addEventListener('touchstart', startAction, {passive: false}); 
+  btn.addEventListener('touchend', stopAction, {passive: false}); 
   btn.addEventListener('touchcancel', stopAction, {passive: false});
-
-  btn.addEventListener('mousedown', startAction);
-  btn.addEventListener('mouseup', stopAction);
+  btn.addEventListener('mousedown', startAction); 
+  btn.addEventListener('mouseup', stopAction); 
   btn.addEventListener('mouseleave', stopAction);
 }
 
-// Ouve cliques no Canvas inteiro (Resolve o Bug do Game Over)
-canvas.addEventListener('click', () => { if(gameOver) restartGame(); });
+canvas.addEventListener('click', () => { 
+  if(gameOver) restartGame(); 
+});
 canvas.addEventListener('touchstart', (e) => { 
   if(gameOver) { e.preventDefault(); restartGame(); } 
 }, {passive: false});
@@ -703,15 +741,31 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowUp') rotate();
   if(e.key === ' ') { e.preventDefault(); hardDrop(); }
   if(e.key === 'Shift' || e.key.toLowerCase() === 'c') hold();
+  if(e.key.toLowerCase() === 'p' || e.key === 'Escape') togglePause(); 
 });
 
 function restartGame() {
   board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
-  piece = null; nextPiece = null; holdPiece = null; gameOver = false;
-  score = 0; level = 1; trashStats = [0, 0, 0, 0];
-  shapeBag = []; colorBag = []; canHold = true;
-  animating = false; linesToClear = []; blocksFlying = []; particles = []; popups = [];
+  piece = null; 
+  nextPiece = null; 
+  holdPiece = null; 
+  gameOver = false;
+  score = 0; 
+  level = 1; 
+  trashStats = [0, 0, 0, 0];
+  shapeBag = []; 
+  colorBag = []; 
+  canHold = true;
+  animating = false; 
+  linesToClear = []; 
+  blocksFlying = []; 
+  particles = []; 
+  popups = [];
   
+  isPaused = false;
+  document.getElementById('pause-menu').classList.add('hidden');
+  document.getElementById('btn-pause-float').style.display = 'flex';
+
   dropInterval = 600;
   clearInterval(window.gameTimer);
   window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
@@ -725,7 +779,11 @@ function restartGame() {
 function renderLoop() {
   ctx.clearRect(0,0,canvas.width,canvas.height);
   
-  updateAnimation();
+  if (!isPaused) {
+    updateAnimation();
+    updateParticles();
+  }
+  
   drawBoard();
   drawPiece();
   drawSidebar();
@@ -735,39 +793,37 @@ function renderLoop() {
   drawParticles();
   drawPopups();
   
-  // TELA DE DIAGNÓSTICO (GAME OVER ECOLÓGICO)
   if(gameOver) {
-    ctx.fillStyle = 'rgba(10, 15, 25, 0.95)';
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.95)'; 
     ctx.fillRect(0,0,canvas.width,canvas.height);
     
     ctx.fillStyle = '#ff4757'; 
-    ctx.font = 'bold 36px "Orbitron", sans-serif';
+    ctx.font = 'bold 36px "Orbitron", sans-serif'; 
     ctx.textAlign = 'center'; 
     ctx.fillText('DIAGNÓSTICO', canvas.width/2, 100);
     
     ctx.fillStyle = '#fff'; 
-    ctx.font = '18px "Rajdhani", sans-serif';
+    ctx.font = '18px "Rajdhani", sans-serif'; 
     ctx.fillText('Seu impacto ambiental final:', canvas.width/2, 140);
     
-    // Lista de métricas de resíduos
-    ctx.fillStyle = COLORS[0];
+    ctx.fillStyle = COLORS[0]; 
     ctx.fillText(`🥤 Plástico: ${trashStats[0]} un = -${(trashStats[0]*0.2).toFixed(1)}kg de petróleo`, canvas.width/2, 220);
     
-    ctx.fillStyle = COLORS[1];
+    ctx.fillStyle = COLORS[1]; 
     ctx.fillText(`🥫 Metal: ${trashStats[1]} un = +${trashStats[1]*3} horas de energia`, canvas.width/2, 270);
     
-    ctx.fillStyle = COLORS[2];
+    ctx.fillStyle = COLORS[2]; 
     ctx.fillText(`🍾 Vidro: ${trashStats[2]} un = 100% reutilizado`, canvas.width/2, 320);
     
-    ctx.fillStyle = COLORS[3];
+    ctx.fillStyle = COLORS[3]; 
     ctx.fillText(`📦 Papel: ${trashStats[3]} un = ${(trashStats[3]*0.05).toFixed(1)} árvores salvas`, canvas.width/2, 370);
 
     ctx.fillStyle = '#f39c12'; 
-    ctx.font = 'bold 24px "Orbitron", sans-serif';
+    ctx.font = 'bold 24px "Orbitron", sans-serif'; 
     ctx.fillText(`PONTOS TOTAIS: ${score}`, canvas.width/2, 450);
-
+    
     ctx.fillStyle = '#2ed573'; 
-    ctx.font = 'bold 20px "Rajdhani", sans-serif';
+    ctx.font = 'bold 20px "Rajdhani", sans-serif'; 
     ctx.fillText('Toque AQUI na tela para reiniciar!', canvas.width/2, 530);
   }
   
