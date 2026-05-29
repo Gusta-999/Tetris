@@ -14,8 +14,12 @@ canvas.height = 760;
 let board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
 let piece = null;
 let nextPiece = null; 
+let holdPiece = null; // Peça Guardada
+let canHold = true;   // Permissão para trocar a peça
 let gameOver = false;
 let score = 0;
+let highScore = localStorage.getItem('tetrisHighScore') || 0; // Recorde Salvo
+let level = 1; // Nível de dificuldade
 let dropInterval = 600; 
 let animating = false;
 let linesToClear = [];
@@ -115,6 +119,8 @@ function checkLines() {
 
 function spawn() {
   if(gameOver) return;
+  canHold = true; // Autoriza a troca sempre que nasce uma peça nova
+
   if (!nextPiece) {
     piece = randomPiece();
     nextPiece = randomPiece();
@@ -124,6 +130,39 @@ function spawn() {
   }
   if(!isValid(piece.shape, piece.x, piece.y)) {
     gameOver = true;
+    if (score > highScore) {
+      highScore = score;
+      localStorage.setItem('tetrisHighScore', highScore);
+    }
+  }
+}
+
+// Lógica para Trocar/Guardar a peça
+function hold() {
+  if (!canHold || animating || gameOver || !piece) return;
+
+  if (holdPiece === null) {
+    holdPiece = { shape: piece.shape, color: piece.color };
+    piece = null;
+    spawn(); 
+    canHold = false; 
+  } else {
+    let temp = { shape: piece.shape, color: piece.color };
+    piece.shape = holdPiece.shape;
+    piece.color = holdPiece.color;
+    piece.x = Math.floor((COLS - piece.shape[0].length)/2); 
+    piece.y = 0;
+    
+    holdPiece = temp;
+    canHold = false; 
+    
+    if(!isValid(piece.shape, piece.x, piece.y)) {
+      gameOver = true;
+      if (score > highScore) {
+        highScore = score;
+        localStorage.setItem('tetrisHighScore', highScore);
+      }
+    }
   }
 }
 
@@ -157,15 +196,38 @@ function move(dir) {
   if(isValid(piece.shape, nx, piece.y)) piece.x = nx;
 }
 
+// Wall Kick incluído
 function rotate() {
   if(!piece || animating || gameOver) return;
   const shape = piece.shape;
   const rotated = shape[0].map((_, idx) => shape.map(row => row[idx]).reverse());
-  if(isValid(rotated, piece.x, piece.y)) piece.shape = rotated;
+  
+  if(isValid(rotated, piece.x, piece.y)) {
+    piece.shape = rotated;
+  } else if(isValid(rotated, piece.x - 1, piece.y)) {
+    piece.x -= 1;
+    piece.shape = rotated;
+  } else if(isValid(rotated, piece.x + 1, piece.y)) {
+    piece.x += 1;
+    piece.shape = rotated;
+  }
+}
+
+// Aumento Progressivo de Dificuldade
+function updateDifficulty() {
+  let newLevel = Math.floor(score / 1000) + 1; 
+  if (newLevel > level) {
+    level = newLevel;
+    dropInterval = Math.max(100, 600 - (level - 1) * 50); 
+    clearInterval(window.gameTimer);
+    window.gameTimer = setInterval(() => {
+      drop(false);
+    }, dropInterval);
+  }
 }
 
 // ----------------------------------------------------
-// MOTOR DE GRAVIDADE (Para o App Inventor)
+// MOTOR DE GRAVIDADE
 // ----------------------------------------------------
 if (window.gameTimer) clearInterval(window.gameTimer);
 window.gameTimer = setInterval(() => {
@@ -230,12 +292,19 @@ function updateAnimation() {
   }
   
   if(allDone) {
+    // 1. Apaga todas as linhas completas (de baixo para cima)
     linesToClear.sort((a,b)=>b-a);
     for(let row of linesToClear) {
       board.splice(row, 1);
+    }
+    // 2. Adiciona as linhas novas vazias no topo
+    for(let i = 0; i < linesToClear.length; i++) {
       board.unshift(Array(COLS).fill(0));
     }
+    
     score += lineClearScore;
+    updateDifficulty(); // Sobe de nível consoante a pontuação
+    
     animating = false;
     linesToClear = [];
     blocksFlying = [];
@@ -319,19 +388,39 @@ function drawPiece() {
 }
 
 function drawSidebar() {
+  // Painel de Estatísticas Base
   ctx.fillStyle = '#111724';
-  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, BOARD_Y, 120, 80, 8); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, BOARD_Y, 120, 130, 8); ctx.fill();
   ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
   
+  ctx.textAlign = 'center';
+  
+  // Recorde
   ctx.fillStyle = '#8f9bb3';
   ctx.font = '800 12px "Orbitron", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('SCORE', SIDEBAR_X + 60, BOARD_Y + 25);
-  ctx.fillStyle = '#fff';
-  ctx.font = 'bold 26px "Rajdhani", sans-serif';
-  ctx.fillText(score, SIDEBAR_X + 60, BOARD_Y + 55);
+  ctx.fillText('RECORDE', SIDEBAR_X + 60, BOARD_Y + 20);
+  ctx.fillStyle = '#f39c12';
+  ctx.font = 'bold 18px "Rajdhani", sans-serif';
+  ctx.fillText(highScore, SIDEBAR_X + 60, BOARD_Y + 38);
 
-  const NEXT_Y = BOARD_Y + 100;
+  // Pontuação Atual
+  ctx.fillStyle = '#8f9bb3';
+  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillText('PONTOS', SIDEBAR_X + 60, BOARD_Y + 65);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 22px "Rajdhani", sans-serif';
+  ctx.fillText(score, SIDEBAR_X + 60, BOARD_Y + 85);
+
+  // Nível Atual
+  ctx.fillStyle = '#8f9bb3';
+  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillText('NÍVEL', SIDEBAR_X + 60, BOARD_Y + 110);
+  ctx.fillStyle = '#2ed573';
+  ctx.font = 'bold 16px "Rajdhani", sans-serif';
+  ctx.fillText(level, SIDEBAR_X + 60, BOARD_Y + 125);
+
+  // Painel PRÓXIMO
+  const NEXT_Y = BOARD_Y + 145;
   ctx.fillStyle = '#111724';
   ctx.beginPath(); ctx.roundRect(SIDEBAR_X, NEXT_Y, 120, 110, 8); ctx.fill();
   ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
@@ -358,6 +447,40 @@ function drawSidebar() {
         }
       }
     }
+  }
+
+  // Painel GUARDAR
+  const HOLD_Y = NEXT_Y + 125;
+  ctx.fillStyle = '#111724';
+  ctx.beginPath(); ctx.roundRect(SIDEBAR_X, HOLD_Y, 120, 110, 8); ctx.fill();
+  ctx.strokeStyle = '#2a3553'; ctx.lineWidth = 2; ctx.stroke();
+  
+  ctx.fillStyle = '#8f9bb3';
+  ctx.font = '800 12px "Orbitron", sans-serif';
+  ctx.fillText('GUARDAR', SIDEBAR_X + 60, HOLD_Y + 25);
+
+  if (holdPiece) {
+    const shape = holdPiece.shape;
+    const pSize = 22; 
+    const sWidth = shape[0].length * pSize;
+    const sHeight = shape.length * pSize;
+    const startX = SIDEBAR_X + (120 - sWidth) / 2;
+    const startY = HOLD_Y + 35 + (75 - sHeight) / 2;
+    
+    // Deixa transparente caso o jogador já tenha feito uma troca
+    ctx.globalAlpha = canHold ? 1 : 0.3; 
+    
+    for(let r=0; r<shape.length; r++) {
+      for(let c=0; c<shape[0].length; c++) {
+        if(shape[r][c]) {
+          ctx.fillStyle = '#fff';
+          ctx.font = '18px "Segoe UI Emoji", sans-serif';
+          ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+          ctx.fillText(TRASH_ICONS[holdPiece.color], startX + c*pSize + pSize/2, startY + r*pSize + pSize/2 + 2);
+        }
+      }
+    }
+    ctx.globalAlpha = 1; 
   }
 }
 
@@ -487,6 +610,7 @@ bindUniversalButton('btn-down', () => drop(true), true);
 bindUniversalButton('btn-up', rotate, false);
 bindUniversalButton('btn-rotate', rotate, false);
 bindUniversalButton('btn-drop', hardDrop, false);
+bindUniversalButton('btn-hold', hold, false); // Evento do botão Guardar
 
 document.addEventListener('keydown', e => {
   if(e.key === 'ArrowLeft') move(-1);
@@ -494,6 +618,7 @@ document.addEventListener('keydown', e => {
   if(e.key === 'ArrowDown') drop(true);
   if(e.key === 'ArrowUp') rotate();
   if(e.key === ' ') { e.preventDefault(); hardDrop(); }
+  if(e.key === 'Shift' || e.key.toLowerCase() === 'c') hold(); // Atalhos de Teclado Guardar (PC)
 });
 
 function restartGame() {
@@ -502,6 +627,15 @@ function restartGame() {
   score = 0; trashStats = [0, 0, 0, 0];
   shapeBag = []; colorBag = [];
   animating = false; linesToClear = []; blocksFlying = []; particles = [];
+  
+  // Reseta estado avançado
+  holdPiece = null;
+  canHold = true;
+  level = 1;
+  dropInterval = 600;
+  clearInterval(window.gameTimer);
+  window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
+
   spawn();
 }
 
