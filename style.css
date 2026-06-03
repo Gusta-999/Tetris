@@ -8,9 +8,14 @@
 
 /* Layout Flexível que se adapta a Celulares em pé ou Notebooks deitados */
 body { 
-  background: #0d111a;
-  display: flex; 
-  flex-direction: column;
+  background-color: #89dec4; 
+  background-image: url('./fundo.png');
+  background-position: bottom center; 
+  background-repeat: no-repeat; 
+  background-size: 100% auto; 
+  display: flex;
+  justify-content: center; 
+  align-items: center;
   height: 100vh; 
   font-family: 'Rajdhani', sans-serif; 
   overflow: hidden; 
@@ -19,38 +24,54 @@ body {
   user-select: none;
 }
 
+#arcade-machine {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 15px;
+  background: linear-gradient(135deg, #6b737a 0%, #495057 100%);
+  border-radius: 20px;
+  border: 3px solid #8e969d;
+  box-shadow: inset 0 0 15px rgba(0,0,0,0.6), 0 20px 40px rgba(0,0,0,0.8);
+  width: 100%;
+  max-width: 450px; 
+  height: 95vh;
+  z-index: 10;
+}
+
 /* O canvas vai encolher no notebook para caber tudo na tela */
 #game-container {
-  flex: 1 1 auto;
+  flex: 1 1 0;
   min-height: 0; 
+  width: 100%;
   display: flex;
   justify-content: center;
   align-items: center;
-  padding: 10px;
+  padding: 10px 0;
+  background: transparent;
+  border: none;
+  overflow: hidden;
 }
 
 canvas { 
-  max-height: 100%; 
-  max-width: 100%; 
+  width: 100%;
+  height: 100%;
   object-fit: contain; 
   border-radius: 12px; 
-  box-shadow: 0 10px 30px rgba(0,0,0,0.8); 
-  background: #0a0e14;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.5); 
+  background: #0f1626;
 }
 
 /* Painel de Controles */
 #gamepad {
-  flex: 0 0 180px; /* Altura fixa embaixo */
+  flex: 0 0 auto; /* Altura fixa embaixo */
   width: 100%;
-  background: #111724;
-  border-top: 2px solid #1a2235;
+  background: transparent;
+  border: none;
   display: flex;
   justify-content: center; /* Centraliza tudo no PC */
   gap: 40px; /* Espaço entre o analógico e os botões */
   align-items: center;
-  padding: 0 20px;
-  border-radius: 20px 20px 0 0;
-  box-shadow: 0 -10px 20px rgba(0,0,0,0.5);
+  padding: 15px 20px 5px 20px;
 }
 
 /* D-PAD Esquerdo (Analógico) */
@@ -58,49 +79,37 @@ canvas {
   position: relative;
   width: 130px;
   height: 130px;
-  background: #1a2235;
+  background: #636e72;
   border-radius: 50%;
-  box-shadow: inset 0 5px 15px rgba(0,0,0,0.8), 0 5px 10px rgba(0,0,0,0.3);
-  border: 3px solid #0d111a;
+  border: 4px solid #1e272e;
 }
 
 .d-btn {
   position: absolute;
-  background: #2a3553;
-  color: rgba(255,255,255,0.6);
+  background: transparent;
   border: none;
-  font-size: 18px;
+  color: #1e272e;
+  font-size: 24px;
   display: flex;
   justify-content: center;
   align-items: center;
-  box-shadow: inset 0 2px 2px rgba(255,255,255,0.1);
   cursor: pointer; 
+  touch-action: manipulation;
 }
 
 .d-btn:active {
-  background: #2ed573;
-  color: #fff;
+  transform: translateY(4px);
 }
 
-#btn-up { top: 0; left: 45px; width: 40px; height: 42px; border-radius: 8px 8px 4px 4px; }
-#btn-down { bottom: 0; left: 45px; width: 40px; height: 42px; border-radius: 4px 4px 8px 8px; }
-#btn-left { top: 45px; left: 0; width: 42px; height: 40px; border-radius: 8px 4px 4px 8px; }
-#btn-right { top: 45px; right: 0; width: 42px; height: 40px; border-radius: 4px 8px 8px 4px; }
-
-/* Centro do D-Pad */
-.d-pad::after {
-  content: '';
-  position: absolute;
-  top: 48px; left: 48px;
-  width: 34px; height: 34px;
-  background: #111724;
-  border-radius: 50%;
-}
+#btn-up { top: 8px; left: 50%; transform: translateX(-50%); }
+#btn-down { bottom: 8px; left: 50%; transform: translateX(-50%); }
+#btn-left { left: 8px; top: 50%; transform: translateY(-50%); }
+#btn-right { right: 8px; top: 50%; transform: translateY(-50%); }
 
 /* Botões de Ação Direitos */
 .action-buttons {
   display: flex;
-  gap: 12px; /* Reduzido levemente para os 3 botões caberem melhor */
+  gap: 10px; /* Reduzido levemente para os 3 botões caberem melhor */
   align-items: flex-end;
 }
 
@@ -108,32 +117,37 @@ canvas {
   width: 60px;
   height: 60px;
   border-radius: 50%;
-  background: #c0392b;
-  border: 3px solid #0d111a;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+  background: linear-gradient(135deg, #e74c3c, #c0392b);
+  border: 3px solid #2c3e50;
+  box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
   color: white;
-  font-size: 22px;
+  font-size: 16px;
+  font-weight: bold;
   display: flex;
   justify-content: center;
   align-items: center;
   cursor: pointer; 
+  touch-action: manipulation;
 }
 
 /* Novo botão Azul */
 .action-btn.blue {
-  background: #2980b9;
+  background: linear-gradient(135deg, #3498db, #2980b9);
+  border-color: #1f3a52;
 }
 
 .action-btn.green {
-  background: #27ae60;
+  background: #2b8b4b;
   width: 70px;
   height: 70px;
   margin-bottom: 25px;
+  border: 4px solid #1a5c31;
+  box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
 }
 
 .action-btn:active {
-  transform: scale(0.92);
-  filter: brightness(1.2);
+  transform: translateY(4px);
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 0 transparent; 
 }
 
 /* --- ESTILOS DO MENU DE PAUSA --- */
@@ -143,22 +157,26 @@ canvas {
   right: 15px;
   width: 50px;
   height: 50px;
-  background: #2a3553;
-  border: 2px solid #0d111a;
   border-radius: 50%;
+  
+  background: linear-gradient(135deg, #f1c40f, #f39c12);
+  border: 3px solid #2c3e50;
+  box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
+  
   color: white;
   font-size: 20px;
+  font-weight: bold;
   z-index: 100;
   cursor: pointer;
-  box-shadow: 0 4px 8px rgba(0,0,0,0.5);
   display: flex;
   justify-content: center;
   align-items: center;
+  touch-action: manipulation;
 }
 
 #btn-pause-float:active {
-  transform: scale(0.9);
-  background: #3d4c70;
+  transform: translateY(4px);
+  box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 0 transparent; 
 }
 
 #pause-menu {
