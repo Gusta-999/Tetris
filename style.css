@@ -6,7 +6,7 @@
   box-sizing: border-box; 
 }
 
-/* CLASSE PRINCIPAL PARA ESCONDER ELEMENTOS (Faltava isso) */
+/* CLASSE PRINCIPAL PARA ESCONDER ELEMENTOS */
 .hidden {
   display: none !important;
 }
@@ -24,7 +24,7 @@ body {
   height: 100vh; 
   font-family: 'Rajdhani', sans-serif; 
   overflow: hidden; 
-  touch-action: none; /* Bloqueia gestos nativos do celular */
+  touch-action: none; 
   -webkit-user-select: none;
   user-select: none;
 }
@@ -45,7 +45,7 @@ body {
 
 /* O canvas vai encolher no notebook para caber tudo na tela */
 #game-container {
-  flex: 1 1 0;
+  flex: 1 1 auto;
   min-height: 0; 
   width: 100%;
   display: flex;
@@ -55,6 +55,7 @@ body {
   background: transparent;
   border: none;
   overflow: hidden;
+  margin-bottom: 10px;
 }
 
 canvas { 
@@ -66,96 +67,123 @@ canvas {
   background: #0f1626;
 }
 
-/* Painel de Controles */
+/* =========================================
+   NOVO PAINEL DE CONTROLES (GAMEPAD 3D EM CÓDIGO)
+   ========================================= */
 #gamepad {
-  flex: 0 0 auto; 
+  flex: 0 0 auto;
   width: 100%;
-  background: transparent;
-  border: none;
   display: flex;
-  justify-content: center; 
-  gap: 40px; 
+  justify-content: space-between; 
   align-items: center;
-  padding: 15px 20px 5px 20px;
+  padding: 10px 15px;
+  touch-action: none; 
 }
 
-/* D-PAD Esquerdo (Analógico) */
+/* --- D-PAD (Direcional em Cruz Perfeita) --- */
 .d-pad {
-  position: relative;
+  display: grid;
+  grid-template-areas:
+    ". up ."
+    "left . right"
+    ". down .";
+  gap: 4px; 
   width: 130px;
   height: 130px;
-  background: #636e72;
-  border-radius: 50%;
-  border: 4px solid #1e272e;
+  flex-shrink: 0; /* Impede o esmagamento */
 }
 
 .d-btn {
-  position: absolute;
-  background: transparent;
-  border: none;
-  color: #1e272e;
-  font-size: 24px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer; 
+  width: 100%; height: 100%;
+  aspect-ratio: 1 / 1; /* Força quadrados exatos */
+  border-radius: 6px;
+  display: flex; justify-content: center; align-items: center;
+  font-size: 20px; color: #fff;
+  cursor: pointer;
   touch-action: manipulation;
+  
+  /* Visual tátil com CSS puro */
+  background: linear-gradient(145deg, #576574, #34495e);
+  border: 1px solid #1e272e;
+  box-shadow: inset 0px 2px 2px rgba(255,255,255,0.2), 0px 4px 0px #1e272e, 0px 5px 5px rgba(0,0,0,0.4);
+  transition: all 0.05s ease;
 }
 
 .d-btn:active {
   transform: translateY(4px);
+  box-shadow: inset 0px 2px 4px rgba(0,0,0,0.4), 0px 0px 0px #1e272e, 0px 1px 2px rgba(0,0,0,0.5);
+  background: #4b6584;
 }
 
-#btn-up { top: 8px; left: 50%; transform: translateX(-50%); }
-#btn-down { bottom: 8px; left: 50%; transform: translateX(-50%); }
-#btn-left { left: 8px; top: 50%; transform: translateY(-50%); }
-#btn-right { right: 8px; top: 50%; transform: translateY(-50%); }
+#btn-up { grid-area: up; border-radius: 10px 10px 4px 4px; }
+#btn-left { grid-area: left; border-radius: 10px 4px 4px 10px; }
+#btn-right { grid-area: right; border-radius: 4px 10px 10px 4px; }
+#btn-down { grid-area: down; border-radius: 4px 4px 10px 10px; }
 
-/* Botões de Ação Direitos */
+/* --- BOTÕES DE AÇÃO REDONDOS --- */
 .action-buttons {
-  display: flex;
-  gap: 10px; 
-  align-items: flex-end;
+  display: grid;
+  grid-template-columns: 55px 55px;
+  grid-template-rows: 55px 55px;
+  gap: 15px;
+  align-items: center;
+  flex-shrink: 0; /* Impede o esmagamento */
 }
 
 .action-btn {
-  width: 60px;
-  height: 60px;
+  width: 100%; height: 100%;
+  aspect-ratio: 1 / 1; /* Força círculos exatos */
   border-radius: 50%;
-  background: linear-gradient(135deg, #e74c3c, #c0392b);
-  border: 3px solid #2c3e50;
-  box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
-  color: white;
-  font-size: 16px;
-  font-weight: bold;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer; 
+  display: flex; justify-content: center; align-items: center;
+  font-size: 24px; color: #fff; font-weight: bold;
+  cursor: pointer;
   touch-action: manipulation;
-}
-
-/* Novo botão Azul */
-.action-btn.blue {
-  background: linear-gradient(135deg, #3498db, #2980b9);
-  border-color: #1f3a52;
-}
-
-.action-btn.green {
-  background: #2b8b4b;
-  width: 70px;
-  height: 70px;
-  margin-bottom: 25px;
-  border: 4px solid #1a5c31;
-  box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
+  
+  /* Sombra forte para visual de fliperama */
+  border: 2px solid #2c3e50;
+  box-shadow: inset 0px 3px 5px rgba(255,255,255,0.3), 0px 6px 0px #1a252f, 0px 8px 6px rgba(0,0,0,0.5);
+  transition: all 0.05s ease;
 }
 
 .action-btn:active {
-  transform: translateY(4px);
-  box-shadow: inset 0 3px 8px rgba(0,0,0,0.6), 0 0 0 transparent; 
+  transform: translateY(6px);
+  box-shadow: inset 0px 3px 8px rgba(0,0,0,0.6), 0px 0px 0px #1a252f;
 }
 
-/* --- ESTILOS DO MENU DE PAUSA --- */
+.action-btn.blue { 
+  background: linear-gradient(145deg, #3498db, #2980b9); 
+}
+.action-btn.red { 
+  background: linear-gradient(145deg, #e74c3c, #c0392b); 
+}
+.action-btn.green { 
+  background: linear-gradient(145deg, #2ecc71, #27ae60); 
+  font-size: 32px; 
+  /* Botão verde maior ocupando mais espaço */
+  grid-column: 2; 
+  grid-row: 1 / span 2; 
+  width: 75px; 
+  height: 75px; 
+  justify-self: center; 
+  align-self: center;
+}
+
+/* Animação do botão de rotação */
+.action-btn.green .rot-icon {
+  display: inline-block;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.action-btn.green:active .rot-icon {
+  animation: spin 0.3s linear;
+}
+
+
+/* =========================================
+   ESTILOS DOS MENUS (Pausa e Inicial)
+   ========================================= */
 #btn-pause-float {
   position: absolute;
   top: 15px;
@@ -227,10 +255,8 @@ canvas {
 
 .menu-btn.green-btn { background: #27ae60; }
 .menu-btn.red-btn { background: #c0392b; }
-
 .menu-btn:active { transform: scale(0.95); filter: brightness(1.2); }
 
-/* --- ESTILOS DO MENU INICIAL --- */
 #main-menu {
   position: fixed;
   top: 0; left: 0; width: 100%; height: 100%;
@@ -272,11 +298,8 @@ canvas {
   line-height: 1.1;
 }
 
-.sub-title {
-  color: #f39c12;
-  font-family: 'Orbitron', sans-serif;
-  margin-bottom: 20px;
-}
+.sub-title { color: #f39c12; font-family: 'Orbitron', sans-serif; margin-bottom: 20px; }
+.sub-title-modos { margin-bottom: 15px; }
 
 .tetris-btn {
   width: 100%;
@@ -292,7 +315,6 @@ canvas {
   transition: transform 0.1s;
   text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
-
 .tetris-btn:active, .mode-btn:active { transform: scale(0.95); }
 
 .color-i { background: #1e90ff; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
@@ -301,6 +323,14 @@ canvas {
 .color-s { background: #2ed573; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
 .color-z { background: #ff4757; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
 .color-j { background: #e67e22; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+
+.btn-zen {
+  background: #1e90ff; 
+  margin-top: 15px; 
+  text-align: center; 
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4);
+}
+.btn-zen small { display: block; margin-top: 2px; }
 
 .mode-btn {
   text-align: left;
@@ -329,20 +359,43 @@ canvas {
 .regras-texto ul { padding-left: 20px; margin-bottom: 10px; }
 .regras-texto li { margin-bottom: 4px; }
 
-/* --- NOVO ESTILO PARA O BOTÃO ZEN --- */
-.btn-zen {
-  background: #1e90ff; /* Mantém a cor azul claro padrão */
-  margin-top: 15px; /* Dá um espaço extra para destacar */
-  text-align: center; /* Centraliza o texto principal */
-  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4);
-}
 
-.btn-zen small {
-  display: block; /* Garante que o texto pequeno fique abaixo */
-  margin-top: 2px;
-}
+/* =========================================
+   ADAPTAÇÃO PERFEITA PARA CELULAR
+   ========================================= */
+@media (max-width: 600px) {
+  #arcade-machine {
+    width: 100vw;
+    height: 100dvh; /* Remove o corte embaixo do celular */
+    max-width: 100%;
+    border-radius: 0;
+    border: none;
+    padding: 10px 5px 20px 5px; 
+  }
 
-/* Ajuste sutil na margem do título dos modos */
-.sub-title-modos {
-  margin-bottom: 15px;
+  #game-container {
+    padding: 0; 
+  }
+
+  #gamepad {
+    padding: 10px 5px 5px 5px;
+    gap: 10px;
+  }
+
+  /* Ajuste leve nos tamanhos do botão para o mobile */
+  .d-pad {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .action-buttons {
+    grid-template-columns: 60px 60px;
+    grid-template-rows: 60px 60px;
+    gap: 12px;
+  }
+
+  .action-btn.green {
+    width: 75px; 
+    height: 75px;
+  }
 }
