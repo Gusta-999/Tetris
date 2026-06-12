@@ -6,12 +6,10 @@
   box-sizing: border-box; 
 }
 
-/* CLASSE PRINCIPAL PARA ESCONDER ELEMENTOS */
 .hidden {
   display: none !important;
 }
 
-/* Layout Flexível que se adapta a Celulares em pé ou Notebooks deitados */
 body { 
   background-color: #89dec4; 
   background-image: url('./fundo.png');
@@ -43,10 +41,9 @@ body {
   z-index: 10;
 }
 
-/* O canvas vai encolher no notebook para caber tudo na tela */
 #game-container {
   flex: 1 1 auto;
-  min-height: 0; 
+  min-height: 0 !important; /* Essencial: permite que a tela de cima encolha */
   width: 100%;
   display: flex;
   justify-content: center;
@@ -68,10 +65,10 @@ canvas {
 }
 
 /* =========================================
-   NOVO PAINEL DE CONTROLES (GAMEPAD 3D EM CÓDIGO)
+   BLINDAGEM DO GAMEPAD (NÃO ESMAGA MAIS)
    ========================================= */
 #gamepad {
-  flex: 0 0 auto;
+  flex: 0 0 160px !important; /* Trava a altura do controle em 160px */
   width: 100%;
   display: flex;
   justify-content: space-between; 
@@ -80,7 +77,7 @@ canvas {
   touch-action: none; 
 }
 
-/* --- D-PAD (Direcional em Cruz Perfeita) --- */
+/* --- D-PAD (Direcional) --- */
 .d-pad {
   display: grid;
   grid-template-areas:
@@ -88,21 +85,19 @@ canvas {
     "left . right"
     ". down .";
   gap: 4px; 
-  width: 130px;
-  height: 130px;
-  flex-shrink: 0; /* Impede o esmagamento */
+  width: 130px !important;
+  height: 130px !important;
+  flex-shrink: 0 !important; 
 }
 
 .d-btn {
-  width: 100%; height: 100%;
-  aspect-ratio: 1 / 1; /* Força quadrados exatos */
+  width: 100% !important; 
+  height: 100% !important;
   border-radius: 6px;
   display: flex; justify-content: center; align-items: center;
   font-size: 20px; color: #fff;
   cursor: pointer;
   touch-action: manipulation;
-  
-  /* Visual tátil com CSS puro */
   background: linear-gradient(145deg, #576574, #34495e);
   border: 1px solid #1e272e;
   box-shadow: inset 0px 2px 2px rgba(255,255,255,0.2), 0px 4px 0px #1e272e, 0px 5px 5px rgba(0,0,0,0.4);
@@ -120,26 +115,24 @@ canvas {
 #btn-right { grid-area: right; border-radius: 4px 10px 10px 4px; }
 #btn-down { grid-area: down; border-radius: 4px 4px 10px 10px; }
 
-/* --- BOTÕES DE AÇÃO REDONDOS --- */
+/* --- BOTÕES REDONDOS (Estilo Fixo) --- */
 .action-buttons {
   display: grid;
   grid-template-columns: 55px 55px;
   grid-template-rows: 55px 55px;
   gap: 15px;
   align-items: center;
-  flex-shrink: 0; /* Impede o esmagamento */
+  flex-shrink: 0 !important;
 }
 
 .action-btn {
-  width: 100%; height: 100%;
-  aspect-ratio: 1 / 1; /* Força círculos exatos */
-  border-radius: 50%;
+  width: 55px !important; /* Trava a largura */
+  height: 55px !important; /* Trava a altura, garantindo o círculo perfeito */
+  border-radius: 50% !important;
   display: flex; justify-content: center; align-items: center;
   font-size: 24px; color: #fff; font-weight: bold;
   cursor: pointer;
   touch-action: manipulation;
-  
-  /* Sombra forte para visual de fliperama */
   border: 2px solid #2c3e50;
   box-shadow: inset 0px 3px 5px rgba(255,255,255,0.3), 0px 6px 0px #1a252f, 0px 8px 6px rgba(0,0,0,0.5);
   transition: all 0.05s ease;
@@ -150,39 +143,25 @@ canvas {
   box-shadow: inset 0px 3px 8px rgba(0,0,0,0.6), 0px 0px 0px #1a252f;
 }
 
-.action-btn.blue { 
-  background: linear-gradient(145deg, #3498db, #2980b9); 
-}
-.action-btn.red { 
-  background: linear-gradient(145deg, #e74c3c, #c0392b); 
-}
+.action-btn.blue { background: linear-gradient(145deg, #3498db, #2980b9); }
+.action-btn.red { background: linear-gradient(145deg, #e74c3c, #c0392b); }
 .action-btn.green { 
   background: linear-gradient(145deg, #2ecc71, #27ae60); 
   font-size: 32px; 
-  /* Botão verde maior ocupando mais espaço */
   grid-column: 2; 
   grid-row: 1 / span 2; 
-  width: 75px; 
-  height: 75px; 
+  width: 75px !important; 
+  height: 75px !important; 
   justify-self: center; 
   align-self: center;
 }
 
-/* Animação do botão de rotação */
-.action-btn.green .rot-icon {
-  display: inline-block;
-}
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.action-btn.green:active .rot-icon {
-  animation: spin 0.3s linear;
-}
-
+.action-btn.green .rot-icon { display: inline-block; }
+@keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.action-btn.green:active .rot-icon { animation: spin 0.3s linear; }
 
 /* =========================================
-   ESTILOS DOS MENUS (Pausa e Inicial)
+   MENUS
    ========================================= */
 #btn-pause-float {
   position: absolute;
@@ -231,89 +210,39 @@ canvas {
   max-width: 350px;
 }
 
-.pause-content h2 {
-  color: #ff4757;
-  font-family: 'Orbitron', sans-serif;
-  margin-bottom: 30px;
-  font-size: 32px;
-}
+.pause-content h2 { color: #ff4757; font-family: 'Orbitron', sans-serif; margin-bottom: 30px; font-size: 32px; }
 
 .menu-btn {
-  display: block;
-  width: 100%;
-  padding: 15px 20px;
-  margin-bottom: 15px;
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 20px;
-  font-weight: bold;
-  color: white;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
+  display: block; width: 100%; padding: 15px 20px; margin-bottom: 15px;
+  font-family: 'Rajdhani', sans-serif; font-size: 20px; font-weight: bold;
+  color: white; border: none; border-radius: 8px; cursor: pointer;
   box-shadow: 0 4px 8px rgba(0,0,0,0.4);
 }
-
 .menu-btn.green-btn { background: #27ae60; }
 .menu-btn.red-btn { background: #c0392b; }
 .menu-btn:active { transform: scale(0.95); filter: brightness(1.2); }
 
 #main-menu {
-  position: fixed;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background: #0f1626;
-  z-index: 300; 
-  display: flex;
-  justify-content: center;
-  align-items: center;
+  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  background: #0f1626; z-index: 300; display: flex; justify-content: center; align-items: center;
 }
-
 .menu-background {
-  position: absolute;
-  top: 0; left: 0; width: 100%; height: 100%;
-  background-size: cover;
-  background-position: center;
-  opacity: 0.25; 
-  z-index: -1;
+  position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+  background-size: cover; background-position: center; opacity: 0.25; z-index: -1;
 }
-
 .menu-content {
-  background: rgba(17, 23, 36, 0.95);
-  padding: 30px;
-  border-radius: 15px;
-  border: 4px solid #3d4c70;
-  text-align: center;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.9);
-  max-width: 450px;
-  width: 90%;
-  max-height: 90vh;
-  overflow-y: auto;
+  background: rgba(17, 23, 36, 0.95); padding: 30px; border-radius: 15px;
+  border: 4px solid #3d4c70; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+  max-width: 450px; width: 90%; max-height: 90vh; overflow-y: auto;
 }
 
-.game-title {
-  color: #2ed573;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 38px;
-  margin-bottom: 20px;
-  text-shadow: 3px 3px 0 #1e90ff, -3px -3px 0 #ff4757;
-  line-height: 1.1;
-}
-
+.game-title { color: #2ed573; font-family: 'Orbitron', sans-serif; font-size: 38px; margin-bottom: 20px; text-shadow: 3px 3px 0 #1e90ff, -3px -3px 0 #ff4757; line-height: 1.1; }
 .sub-title { color: #f39c12; font-family: 'Orbitron', sans-serif; margin-bottom: 20px; }
 .sub-title-modos { margin-bottom: 15px; }
 
 .tetris-btn {
-  width: 100%;
-  padding: 20px;
-  margin-bottom: 15px;
-  font-family: 'Orbitron', sans-serif;
-  font-size: 24px;
-  font-weight: bold;
-  color: white;
-  border: none;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: transform 0.1s;
-  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+  width: 100%; padding: 20px; margin-bottom: 15px; font-family: 'Orbitron', sans-serif; font-size: 24px;
+  font-weight: bold; color: white; border: none; cursor: pointer; border-radius: 8px; transition: transform 0.1s; text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
 }
 .tetris-btn:active, .mode-btn:active { transform: scale(0.95); }
 
@@ -324,78 +253,36 @@ canvas {
 .color-z { background: #ff4757; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
 .color-j { background: #e67e22; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
 
-.btn-zen {
-  background: #1e90ff; 
-  margin-top: 15px; 
-  text-align: center; 
-  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4);
-}
+.btn-zen { background: #1e90ff; margin-top: 15px; text-align: center; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); }
 .btn-zen small { display: block; margin-top: 2px; }
 
-.mode-btn {
-  text-align: left;
-  padding: 12px 15px;
-  margin-bottom: 10px;
-  line-height: 1.3;
-}
-.mode-btn small {
-  font-family: 'Rajdhani', sans-serif;
-  font-size: 15px;
-  font-weight: normal;
-  text-shadow: none;
-}
+.mode-btn { text-align: left; padding: 12px 15px; margin-bottom: 10px; line-height: 1.3; }
+.mode-btn small { font-family: 'Rajdhani', sans-serif; font-size: 15px; font-weight: normal; text-shadow: none; }
 
 .regras-texto {
-  color: white;
-  text-align: left;
-  margin-bottom: 20px;
-  font-size: 17px;
-  background: rgba(0,0,0,0.3);
-  padding: 15px;
-  border-radius: 8px;
-  border: 1px solid #2a3553;
+  color: white; text-align: left; margin-bottom: 20px; font-size: 17px; background: rgba(0,0,0,0.3);
+  padding: 15px; border-radius: 8px; border: 1px solid #2a3553;
 }
 .regras-texto h3 { color: #f39c12; margin-top: 10px; margin-bottom: 5px; }
 .regras-texto ul { padding-left: 20px; margin-bottom: 10px; }
 .regras-texto li { margin-bottom: 4px; }
 
-
 /* =========================================
-   ADAPTAÇÃO PERFEITA PARA CELULAR
+   ADAPTAÇÃO CELULAR
    ========================================= */
 @media (max-width: 600px) {
   #arcade-machine {
     width: 100vw;
-    height: 100dvh; /* Remove o corte embaixo do celular */
+    height: 100dvh; 
     max-width: 100%;
     border-radius: 0;
     border: none;
     padding: 10px 5px 20px 5px; 
   }
-
-  #game-container {
-    padding: 0; 
-  }
-
+  #game-container { padding: 0; }
+  
   #gamepad {
     padding: 10px 5px 5px 5px;
     gap: 10px;
-  }
-
-  /* Ajuste leve nos tamanhos do botão para o mobile */
-  .d-pad {
-    width: 140px;
-    height: 140px;
-  }
-  
-  .action-buttons {
-    grid-template-columns: 60px 60px;
-    grid-template-rows: 60px 60px;
-    gap: 12px;
-  }
-
-  .action-btn.green {
-    width: 75px; 
-    height: 75px;
   }
 }
