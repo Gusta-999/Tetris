@@ -43,7 +43,7 @@ body {
 
 #game-container {
   flex: 1 1 auto;
-  min-height: 0 !important; /* Essencial: permite que a tela de cima encolha */
+  min-height: 0 !important; 
   width: 100%;
   display: flex;
   justify-content: center;
@@ -65,10 +65,10 @@ canvas {
 }
 
 /* =========================================
-   BLINDAGEM DO GAMEPAD (NÃO ESMAGA MAIS)
+   BLINDAGEM DO GAMEPAD 
    ========================================= */
 #gamepad {
-  flex: 0 0 160px !important; /* Trava a altura do controle em 160px */
+  flex: 0 0 160px !important; 
   width: 100%;
   display: flex;
   justify-content: space-between; 
@@ -115,7 +115,7 @@ canvas {
 #btn-right { grid-area: right; border-radius: 4px 10px 10px 4px; }
 #btn-down { grid-area: down; border-radius: 4px 4px 10px 10px; }
 
-/* --- BOTÕES REDONDOS (Estilo Fixo) --- */
+/* --- BOTÕES REDONDOS --- */
 .action-buttons {
   display: grid;
   grid-template-columns: 55px 55px;
@@ -126,8 +126,8 @@ canvas {
 }
 
 .action-btn {
-  width: 55px !important; /* Trava a largura */
-  height: 55px !important; /* Trava a altura, garantindo o círculo perfeito */
+  width: 55px !important; 
+  height: 55px !important; 
   border-radius: 50% !important;
   display: flex; justify-content: center; align-items: center;
   font-size: 24px; color: #fff; font-weight: bold;
@@ -268,12 +268,16 @@ canvas {
 .regras-texto li { margin-bottom: 4px; }
 
 /* =========================================
-   ADAPTAÇÃO CELULAR
+   ADAPTAÇÃO CELULAR BLINDADA
    ========================================= */
 @media (max-width: 600px) {
+  body {
+    overflow-y: auto; /* Permite scroll se a tela do celular for menor que o jogo inteiro */
+  }
   #arcade-machine {
     width: 100vw;
     height: 100dvh; 
+    min-height: 700px; /* Isso garante que a máquina inteira NUNCA seja menor que 700px. Se a tela for menor, aparece barra de rolagem. Adeus esmagamento! */
     max-width: 100%;
     border-radius: 0;
     border: none;
