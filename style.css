@@ -6,6 +6,11 @@
   box-sizing: border-box; 
 }
 
+/* CLASSE PRINCIPAL PARA ESCONDER ELEMENTOS (Faltava isso) */
+.hidden {
+  display: none !important;
+}
+
 /* Layout Flexível que se adapta a Celulares em pé ou Notebooks deitados */
 body { 
   background-color: #89dec4; 
@@ -63,13 +68,13 @@ canvas {
 
 /* Painel de Controles */
 #gamepad {
-  flex: 0 0 auto; /* Altura fixa embaixo */
+  flex: 0 0 auto; 
   width: 100%;
   background: transparent;
   border: none;
   display: flex;
-  justify-content: center; /* Centraliza tudo no PC */
-  gap: 40px; /* Espaço entre o analógico e os botões */
+  justify-content: center; 
+  gap: 40px; 
   align-items: center;
   padding: 15px 20px 5px 20px;
 }
@@ -109,7 +114,7 @@ canvas {
 /* Botões de Ação Direitos */
 .action-buttons {
   display: flex;
-  gap: 10px; /* Reduzido levemente para os 3 botões caberem melhor */
+  gap: 10px; 
   align-items: flex-end;
 }
 
@@ -158,11 +163,9 @@ canvas {
   width: 50px;
   height: 50px;
   border-radius: 50%;
-  
   background: linear-gradient(135deg, #f1c40f, #f39c12);
   border: 3px solid #2c3e50;
   box-shadow: inset 0 5px 10px rgba(255,255,255,0.3), 0 5px 10px rgba(0,0,0,0.5);
-  
   color: white;
   font-size: 20px;
   font-weight: bold;
@@ -187,10 +190,6 @@ canvas {
   display: flex;
   justify-content: center;
   align-items: center;
-}
-
-#pause-menu.hidden {
-  display: none;
 }
 
 .pause-content {
@@ -230,3 +229,120 @@ canvas {
 .menu-btn.red-btn { background: #c0392b; }
 
 .menu-btn:active { transform: scale(0.95); filter: brightness(1.2); }
+
+/* --- ESTILOS DO MENU INICIAL --- */
+#main-menu {
+  position: fixed;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background: #0f1626;
+  z-index: 300; 
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu-background {
+  position: absolute;
+  top: 0; left: 0; width: 100%; height: 100%;
+  background-size: cover;
+  background-position: center;
+  opacity: 0.25; 
+  z-index: -1;
+}
+
+.menu-content {
+  background: rgba(17, 23, 36, 0.95);
+  padding: 30px;
+  border-radius: 15px;
+  border: 4px solid #3d4c70;
+  text-align: center;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.9);
+  max-width: 450px;
+  width: 90%;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.game-title {
+  color: #2ed573;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 38px;
+  margin-bottom: 20px;
+  text-shadow: 3px 3px 0 #1e90ff, -3px -3px 0 #ff4757;
+  line-height: 1.1;
+}
+
+.sub-title {
+  color: #f39c12;
+  font-family: 'Orbitron', sans-serif;
+  margin-bottom: 20px;
+}
+
+.tetris-btn {
+  width: 100%;
+  padding: 20px;
+  margin-bottom: 15px;
+  font-family: 'Orbitron', sans-serif;
+  font-size: 24px;
+  font-weight: bold;
+  color: white;
+  border: none;
+  cursor: pointer;
+  border-radius: 8px;
+  transition: transform 0.1s;
+  text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.tetris-btn:active, .mode-btn:active { transform: scale(0.95); }
+
+.color-i { background: #1e90ff; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+.color-t { background: #9b59b6; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+.color-o { background: #f1c40f; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+.color-s { background: #2ed573; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+.color-z { background: #ff4757; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+.color-j { background: #e67e22; box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4); } 
+
+.mode-btn {
+  text-align: left;
+  padding: 12px 15px;
+  margin-bottom: 10px;
+  line-height: 1.3;
+}
+.mode-btn small {
+  font-family: 'Rajdhani', sans-serif;
+  font-size: 15px;
+  font-weight: normal;
+  text-shadow: none;
+}
+
+.regras-texto {
+  color: white;
+  text-align: left;
+  margin-bottom: 20px;
+  font-size: 17px;
+  background: rgba(0,0,0,0.3);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid #2a3553;
+}
+.regras-texto h3 { color: #f39c12; margin-top: 10px; margin-bottom: 5px; }
+.regras-texto ul { padding-left: 20px; margin-bottom: 10px; }
+.regras-texto li { margin-bottom: 4px; }
+
+/* --- NOVO ESTILO PARA O BOTÃO ZEN --- */
+.btn-zen {
+  background: #1e90ff; /* Mantém a cor azul claro padrão */
+  margin-top: 15px; /* Dá um espaço extra para destacar */
+  text-align: center; /* Centraliza o texto principal */
+  box-shadow: inset -4px -4px 0px rgba(0,0,0,0.3), inset 4px 4px 0px rgba(255,255,255,0.4);
+}
+
+.btn-zen small {
+  display: block; /* Garante que o texto pequeno fique abaixo */
+  margin-top: 2px;
+}
+
+/* Ajuste sutil na margem do título dos modos */
+.sub-title-modos {
+  margin-bottom: 15px;
+}

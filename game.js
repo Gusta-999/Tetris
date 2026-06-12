@@ -24,6 +24,9 @@ let level = 1;
 let dropInterval = 600; 
 let animating = false;
 let linesToClear = [];
+let gameMode = 'normal'; 
+let isGameRunning = false;
+let deteriorationTimer = null;
 let truckX = -80;
 let blocksFlying = [];
 let particles = [];
@@ -58,7 +61,66 @@ const PIECES = [
 
 let shapeBag = [];
 let colorBag = [];
+let curiosidadeAtual = ""; 
 
+const CURIOSIDADES_GAME_OVER = [
+  "A reciclagem de uma única lata de alumínio economiza energia suficiente para manter uma TV ligada por três horas!",
+  "Reciclar papel consome 70% menos energia do que produzi-lo a partir da madeira.",
+  "O vidro é 100% reciclável e pode ser reciclado infinitas vezes sem perder a qualidade.",
+  "Para cada tonelada de papel reciclado, cerca de 22 árvores adultas são poupadas.",
+  "No Modo Zen, você joga sem pressa. Ótimo para treinar e relaxar a mente!"
+];
+
+// --- FUNÇÕES DOS MENUS (INICIAL E PAUSA) ---
+function showModes() {
+  document.getElementById('menu-principal').classList.add('hidden');
+  document.getElementById('menu-modos').classList.remove('hidden');
+}
+
+function showRules() {
+  document.getElementById('menu-principal').classList.add('hidden');
+  document.getElementById('menu-regras').classList.remove('hidden');
+}
+
+function backToMain() {
+  document.getElementById('menu-modos').classList.add('hidden');
+  document.getElementById('menu-regras').classList.add('hidden');
+  document.getElementById('menu-principal').classList.remove('hidden');
+}
+
+function startGame(mode) {
+  gameMode = mode;
+  document.getElementById('main-menu').classList.add('hidden'); 
+  restartGame(); 
+  
+  if (!isGameRunning) {
+    isGameRunning = true;
+    renderLoop();
+  }
+}
+
+function restartCurrentMode() {
+  togglePause();
+  restartGame();
+}
+
+function goToModeSelection() {
+  isPaused = true;
+  document.getElementById('pause-menu').classList.add('hidden');
+  document.getElementById('btn-pause-float').style.display = 'none';
+  document.getElementById('main-menu').classList.remove('hidden');
+  showModes();
+}
+
+function goToMainMenu() {
+  isPaused = true;
+  document.getElementById('pause-menu').classList.add('hidden');
+  document.getElementById('btn-pause-float').style.display = 'none';
+  document.getElementById('main-menu').classList.remove('hidden');
+  backToMain();
+}
+
+// --- LÓGICA DO JOGO ---
 function shuffle(array) {
   let currentIndex = array.length, randomIndex;
   while (currentIndex != 0) {
@@ -189,6 +251,9 @@ function hold() {
 
 function drop(isSoftDrop = false) {
   if(!piece || animating || gameOver || isPaused) return false;
+  
+  if (gameMode === 'zen' && !isSoftDrop) return false;
+
   const ny = piece.y + 1;
   if(isValid(piece.shape, piece.x, ny)) {
     piece.y = ny;
@@ -235,17 +300,20 @@ function rotate() {
 
 function updateDifficulty() {
   let newLevel = Math.floor(score / 1000) + 1; 
+  
+  if (gameMode === 'dificil') {
+    newLevel = Math.floor(score / 500) + 1; 
+  }
+
   if (newLevel > level) {
     level = newLevel;
-    dropInterval = Math.max(100, 600 - (level - 1) * 50); 
+    let limitador = gameMode === 'dificil' ? 60 : 50; 
+    dropInterval = Math.max(80, 600 - (level - 1) * limitador); 
     clearInterval(window.gameTimer);
     window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
   }
 }
 
-// ----------------------------------------------------
-// GERENCIAMENTO DA PAUSA
-// ----------------------------------------------------
 function togglePause() {
   if (gameOver) return;
   isPaused = !isPaused;
@@ -264,16 +332,6 @@ function togglePause() {
     window.gameTimer = setInterval(() => { drop(false); }, dropInterval); 
   }
 }
-
-document.getElementById('btn-pause-float').addEventListener('click', (e) => { 
-  e.target.blur(); 
-  togglePause(); 
-});
-document.getElementById('btn-resume').addEventListener('click', togglePause);
-document.getElementById('btn-restart-menu').addEventListener('click', () => {
-  togglePause(); 
-  restartGame();
-});
 
 // ----------------------------------------------------
 // MOTOR DE GRAVIDADE E ANIMAÇÕES
@@ -687,7 +745,7 @@ function drawFlyingBlocks() {
 }
 
 // ----------------------------------------------------
-// GERENCIADOR DE INPUTS
+// GERENCIADOR DE INPUTS (BOTÕES)
 // ----------------------------------------------------
 function bindUniversalButton(id, action, continuous = false) {
   const btn = document.getElementById(id);
@@ -695,7 +753,6 @@ function bindUniversalButton(id, action, continuous = false) {
 
   const startAction = (e) => {
     if(e.type === 'touchstart') e.preventDefault(); 
-    if (gameOver) return restartGame();
     clearTimeout(timeout); 
     clearInterval(interval);
     
@@ -719,13 +776,6 @@ function bindUniversalButton(id, action, continuous = false) {
   btn.addEventListener('mouseleave', stopAction);
 }
 
-canvas.addEventListener('click', () => { 
-  if(gameOver) restartGame(); 
-});
-canvas.addEventListener('touchstart', (e) => { 
-  if(gameOver) { e.preventDefault(); restartGame(); } 
-}, {passive: false});
-
 bindUniversalButton('btn-left', () => move(-1), true);
 bindUniversalButton('btn-right', () => move(1), true);
 bindUniversalButton('btn-down', () => drop(true), true); 
@@ -733,6 +783,7 @@ bindUniversalButton('btn-up', rotate, false);
 bindUniversalButton('btn-rotate', rotate, false);
 bindUniversalButton('btn-drop', hardDrop, false);
 bindUniversalButton('btn-hold', hold, false); 
+bindUniversalButton('btn-pause-float', togglePause, false);
 
 document.addEventListener('keydown', e => {
   if(e.key === 'ArrowLeft') move(-1);
@@ -744,32 +795,112 @@ document.addEventListener('keydown', e => {
   if(e.key.toLowerCase() === 'p' || e.key === 'Escape') togglePause(); 
 });
 
+// ----------------------------------------------------
+// GERENCIADOR DE INPUTS (TOQUE NA TELA / SWIPE)
+// ----------------------------------------------------
+let touchStartX = 0;
+let touchStartY = 0;
+let touchEndX = 0;
+let touchEndY = 0;
+const SWIPE_THRESHOLD = 50; 
+
+// Garante que o Game Over feche clicando ou tocando em qualquer lugar do canvas
+canvas.addEventListener('pointerdown', (e) => {
+  if (gameOver) {
+    restartGame();
+  }
+});
+
+canvas.addEventListener('touchstart', (e) => {
+  if (gameOver) return;
+  touchStartX = e.changedTouches[0].screenX;
+  touchStartY = e.changedTouches[0].screenY;
+}, {passive: true});
+
+canvas.addEventListener('touchend', (e) => {
+  if (gameOver) return;
+  touchEndX = e.changedTouches[0].screenX;
+  touchEndY = e.changedTouches[0].screenY;
+  handleSwipe();
+}, {passive: true});
+
+function handleSwipe() {
+  const diffX = touchEndX - touchStartX;
+  const diffY = touchEndY - touchStartY;
+
+  if (Math.abs(diffX) < SWIPE_THRESHOLD && Math.abs(diffY) < SWIPE_THRESHOLD) {
+    rotate();
+    return;
+  }
+
+  if (Math.abs(diffX) > Math.abs(diffY)) {
+    if (diffX > 0) {
+      move(1); 
+    } else {
+      move(-1); 
+    }
+  } else {
+    if (diffY > 0) {
+      hardDrop(); 
+    } else {
+      hold(); 
+    }
+  }
+}
+
+// ----------------------------------------------------
+// FUNÇÃO DE REINÍCIO
+// ----------------------------------------------------
 function restartGame() {
   board = Array(ROWS).fill().map(() => Array(COLS).fill(0));
-  piece = null; 
-  nextPiece = null; 
-  holdPiece = null; 
+  piece = null; nextPiece = null; holdPiece = null; 
   gameOver = false;
-  score = 0; 
-  level = 1; 
   trashStats = [0, 0, 0, 0];
-  shapeBag = []; 
-  colorBag = []; 
+  shapeBag = []; colorBag = []; 
   canHold = true;
-  animating = false; 
-  linesToClear = []; 
-  blocksFlying = []; 
-  particles = []; 
-  popups = [];
-  
+  animating = false; linesToClear = []; blocksFlying = []; 
+  particles = []; popups = [];
   isPaused = false;
+  
   document.getElementById('pause-menu').classList.add('hidden');
   document.getElementById('btn-pause-float').style.display = 'flex';
 
-  dropInterval = 600;
+  curiosidadeAtual = CURIOSIDADES_GAME_OVER[Math.floor(Math.random() * CURIOSIDADES_GAME_OVER.length)];
+
+  if (gameMode === 'rapido') {
+    score = 0;
+    level = 8;
+    dropInterval = 250;
+  } else if (gameMode === 'zen') {
+    score = 0;
+    level = 1;
+    dropInterval = 999999; 
+  } else {
+    score = 0; 
+    level = 1; 
+    dropInterval = 600;
+  }
+
+  if (deteriorationTimer) clearInterval(deteriorationTimer);
+  if (gameMode === 'deteriorar') {
+    deteriorationTimer = setInterval(() => {
+      if (isPaused || gameOver || animating) return;
+      let occupied = [];
+      for (let r=0; r<ROWS; r++) {
+         for (let c=0; c<COLS; c++) {
+            if (board[r][c] !== 0) occupied.push({r, c});
+         }
+      }
+      if (occupied.length > 0) {
+         let target = occupied[Math.floor(Math.random() * occupied.length)];
+         board[target.r][target.c] = 0; 
+         addParticles(BOARD_X + target.c*BLOCK + BLOCK/2, BOARD_Y + target.r*BLOCK + BLOCK/2, 0, 6);
+      }
+    }, 5000); 
+  }
+
   clearInterval(window.gameTimer);
   window.gameTimer = setInterval(() => { drop(false); }, dropInterval);
-
   spawn();
 }
 
@@ -794,41 +925,78 @@ function renderLoop() {
   drawPopups();
   
   if(gameOver) {
-    ctx.fillStyle = 'rgba(10, 15, 25, 0.95)'; 
+    ctx.fillStyle = 'rgba(10, 15, 25, 0.98)'; 
     ctx.fillRect(0,0,canvas.width,canvas.height);
     
     ctx.fillStyle = '#ff4757'; 
     ctx.font = 'bold 36px "Orbitron", sans-serif'; 
     ctx.textAlign = 'center'; 
-    ctx.fillText('DIAGNÓSTICO', canvas.width/2, 100);
+    ctx.fillText('DIAGNÓSTICO', canvas.width/2, 120);
     
     ctx.fillStyle = '#fff'; 
     ctx.font = '18px "Rajdhani", sans-serif'; 
-    ctx.fillText('Seu impacto ambiental final:', canvas.width/2, 140);
+    ctx.fillText('Seu impacto ambiental final:', canvas.width/2, 160);
+    
+    const statsY = 220;
+    ctx.font = '18px "Rajdhani", sans-serif'; 
     
     ctx.fillStyle = COLORS[0]; 
-    ctx.fillText(`🥤 Plástico: ${trashStats[0]} un = -${(trashStats[0]*0.2).toFixed(1)}kg de petróleo`, canvas.width/2, 220);
+    ctx.fillText(`🥤 Plástico: ${trashStats[0]} un`, canvas.width/2, statsY);
     
     ctx.fillStyle = COLORS[1]; 
-    ctx.fillText(`🥫 Metal: ${trashStats[1]} un = +${trashStats[1]*3} horas de energia`, canvas.width/2, 270);
+    ctx.fillText(`🥫 Metal: ${trashStats[1]} un`, canvas.width/2, statsY + 40);
     
     ctx.fillStyle = COLORS[2]; 
-    ctx.fillText(`🍾 Vidro: ${trashStats[2]} un = 100% reutilizado`, canvas.width/2, 320);
+    ctx.fillText(`🍾 Vidro: ${trashStats[2]} un`, canvas.width/2, statsY + 80);
     
     ctx.fillStyle = COLORS[3]; 
-    ctx.fillText(`📦 Papel: ${trashStats[3]} un = ${(trashStats[3]*0.05).toFixed(1)} árvores salvas`, canvas.width/2, 370);
+    ctx.fillText(`📦 Papel: ${trashStats[3]} un`, canvas.width/2, statsY + 120);
 
     ctx.fillStyle = '#f39c12'; 
-    ctx.font = 'bold 24px "Orbitron", sans-serif'; 
-    ctx.fillText(`PONTOS TOTAIS: ${score}`, canvas.width/2, 450);
+    ctx.font = 'bold 26px "Orbitron", sans-serif'; 
+    ctx.fillText(`PONTOS TOTAIS: ${score}`, canvas.width/2, statsY + 190);
     
+    const curiosidadeY = statsY + 240;
+    ctx.fillStyle = 'rgba(255,255,255,0.05)';
+    ctx.roundRect(canvas.width/2 - 220, curiosidadeY, 440, 110, 10);
+    ctx.fill();
+
+    ctx.fillStyle = '#eee';
+    ctx.font = 'italic 16px "Rajdhani", sans-serif';
+    
+    wrapText(ctx, curiosidadeAtual, canvas.width/2, curiosidadeY + 30, 400, 22);
+
     ctx.fillStyle = '#2ed573'; 
     ctx.font = 'bold 20px "Rajdhani", sans-serif'; 
-    ctx.fillText('Toque AQUI na tela para reiniciar!', canvas.width/2, 530);
+    ctx.fillText('Toque AQUI na tela para reiniciar!', canvas.width/2, canvas.height - 80);
   }
   
   requestAnimationFrame(renderLoop);
 }
 
+// ----------------------------------------------------
+// FUNÇÃO AUXILIAR DE TEXTO
+// ----------------------------------------------------
+function wrapText(context, text, x, y, maxWidth, lineHeight) {
+  const words = text.split(' ');
+  let line = '';
+  context.textAlign = 'center';
+
+  for(let n = 0; n < words.length; n++) {
+    const testLine = line + words[n] + ' ';
+    const metrics = context.measureText(testLine);
+    const testWidth = metrics.width;
+    if (testWidth > maxWidth && n > 0) {
+      context.fillText(line, x, y);
+      line = words[n] + ' ';
+      y += lineHeight;
+    } else {
+      line = testLine;
+    }
+  }
+  context.fillText(line, x, y);
+}
+
+// --- INICIALIZAÇÃO DO JOGO ---
 spawn();
 renderLoop();

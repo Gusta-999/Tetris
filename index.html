@@ -8,47 +8,89 @@
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-  <title>Tetris Sustentável</title>
-  
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
+  <div id="main-menu">
+      <div class="menu-background" style="background-image: url('https://media.giphy.com/media/xUPGcxuC4mK0M1z9tC/giphy.gif');"></div>
+      
+      <div class="menu-content">
+        <h1 class="game-title">TETRIS<br>SUSTENTÁVEL</h1>
+        
+        <div id="menu-principal">
+          <button class="tetris-btn color-i" onclick="showModes()">■ INICIAR ■</button>
+          <button class="tetris-btn color-t" onclick="showRules()">■ REGRAS ■</button>
+        </div>
+
+        <div id="menu-modos" class="hidden">
+          <h2 class="sub-title sub-title-modos">ESCOLHA O MODO</h2>
+          <button class="menu-btn mode-btn color-o" onclick="startGame('normal')">NORMAL <br><small>O clássico Tetris ecológico</small></button>
+          <button class="menu-btn mode-btn color-s" onclick="startGame('rapido')">RÁPIDO <br><small>Já começa na velocidade Nível 8!</small></button>
+          <button class="menu-btn mode-btn color-z" onclick="startGame('deteriorar')">DETERIORAÇÃO <br><small>As peças do fundo somem com o tempo</small></button>
+          <button class="menu-btn mode-btn color-j" onclick="startGame('dificil')">DIFÍCIL <br><small>A velocidade aumenta em dobro!</small></button>
+          
+          <button class="menu-btn mode-btn color-i btn-zen" onclick="startGame('zen')">
+            MODO ZEN ■ <br><small>Relaxe. A peça não cai sozinha.</small>
+          </button>
+          
+          <button class="menu-btn red-btn" onclick="backToMain()">VOLTAR</button>
+        </div>
+
+        <div id="menu-regras" class="hidden">
+          <h2 class="sub-title">REGRAS E CONTROLES</h2>
+          <div class="regras-texto">
+            <h3>💻 Controles PC:</h3>
+            <ul>
+              <li><strong>Setas ◀ ▶ :</strong> Mover a peça</li>
+              <li><strong>Seta ▲ :</strong> Rotacionar</li>
+              <li><strong>Seta ▼ :</strong> Descer mais rápido (Soft Drop)</li>
+              <li><strong>Espaço :</strong> Queda Instantânea (Hard Drop)</li>
+              <li><strong>Shift, Ctrl ou 'C':</strong> Guardar Peça (Hold)</li>
+              <li><strong>'P' ou Esc :</strong> Pausar o Jogo</li>
+            </ul>
+            <h3>📱 Controles Celular:</h3>
+            <p>Deslize o dedo na tela para mover as peças e rotacionar, ou use o D-Pad direcional na tela. Os botões coloridos servem para Rotacionar (Verde), Guardar a Peça (Azul) e Queda Instantânea (Vermelho).</p>
+            <h3>🕹️ Modos de Jogo:</h3>
+            <ul>
+              <li><strong>Normal:</strong> Jogue para separar o lixo clássico.</li>
+              <li><strong>Rápido:</strong> O jogo já inicia numa velocidade muito alta.</li>
+              <li><strong>Deterioração:</strong> A cada 5 segundos, um bloco já posicionado desaparece, criando buracos!</li>
+              <li><strong>Difícil:</strong> O limite de velocidade é muito maior e sobe rapidamente.</li>
+              <li><strong>Modo Zen:</strong> A peça só desce quando você comanda.</li>
+            </ul>
+          </div>
+          <button class="menu-btn red-btn" onclick="backToMain()">VOLTAR</button>
+        </div>
+      </div>
+    </div>
 
   <button id="btn-pause-float">II</button>
 
   <div id="pause-menu" class="hidden">
     <div class="pause-content">
       <h2>PAUSADO</h2>
-      <button id="btn-resume" class="menu-btn green-btn">▶ CONTINUAR</button>
-      <button id="btn-restart-menu" class="menu-btn red-btn">🔄 REINICIAR</button>
+      <button class="menu-btn green-btn" onclick="togglePause()">▶ CONTINUAR</button>
+      <button class="menu-btn color-i" onclick="restartCurrentMode()">🔄 REINICIAR MODO</button>
+      <button class="menu-btn color-o" onclick="goToModeSelection()">⚙️ TROCAR DE MODO</button>
+      <button class="menu-btn red-btn" onclick="goToMainMenu()">🏠 MENU PRINCIPAL</button>
     </div>
   </div>
 
   <div id="arcade-machine">
-
-  <div id="game-container">
-    <canvas id="tetris"></canvas>
-  </div>
-
-  <div id="gamepad">
-    <div class="d-pad">
-      <div class="d-btn" id="btn-up">↻</div>
-      <div class="d-btn" id="btn-left">◀</div>
-      <div class="d-btn" id="btn-right">▶</div>
-      <div class="d-btn" id="btn-down">▼</div>
+    <div id="game-container">
+      <canvas id="tetris"></canvas>
     </div>
-    <div class="action-buttons">
-      <div class="action-btn blue" id="btn-hold">⟳</div>
-      <div class="action-btn" id="btn-drop">↓</div>
-      <div class="action-btn green" id="btn-rotate">↻</div>
-    </div>
-  </div>
 
+    <div id="gamepad">
+      <div class="d-pad">
+        <div class="d-btn" id="btn-up">↻</div>
+        <div class="d-btn" id="btn-left">◀</div>
+        <div class="d-btn" id="btn-right">▶</div>
+        <div class="d-btn" id="btn-down">▼</div>
+      </div>
+      <div class="action-buttons">
+        <div class="action-btn blue" id="btn-hold">⟳</div>
+        <div class="action-btn" id="btn-drop">↓</div>
+        <div class="action-btn green" id="btn-rotate">↻</div>
+      </div>
+    </div>
   </div>
 
   <script src="game.js"></script>
